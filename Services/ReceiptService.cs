@@ -110,7 +110,7 @@ public class ReceiptService
       <div class=""tagline"">{StoreTagline}</div>
     </div>
     <div class=""meta center"">
-      Sale {saleId:0000}<br />
+      Sale {saleId:0000} &middot; Walk-in Customer<br />
       {timestamp:dddd, MMMM d, yyyy}<br />
       {timestamp:h:mm tt}
     </div>

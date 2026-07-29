@@ -101,6 +101,29 @@
             <Setter Property="Background" Value="{StaticResource AccentDark}" />
         </Style>
 
+        <!-- ===== Smooth interactions: fade hover colors, subtle press + card lift ===== -->
+        <!-- All buttons fade their background/border on hover instead of snapping. -->
+        <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.17" Easing="CubicEaseOut" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.17" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <!-- Gentle press feedback on the primary/interactive buttons. -->
+        <Style Selector="Button.accent, Button.pill, Button.ghost, Button.rowAdd, Button.iconBtn, Button.quickAction">
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.11" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.accent:pressed, Button.pill:pressed, Button.ghost:pressed, Button.rowAdd:pressed, Button.iconBtn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+
         <!-- Header pills -->
         <Style Selector="Button.pill">
             <Setter Property="Background" Value="{StaticResource ChipBg}" />
@@ -108,6 +131,9 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.pill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#E5E7EB" />
         </Style>
 
         <!-- Category card buttons -->
@@ -122,8 +148,20 @@
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.categoryCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="Background" Value="#FFF9F5" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+        <!-- Cards gently lift on hover for a smooth, tactile feel. -->
+        <Style Selector="Button.categoryCard">
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.categoryCard:pointerover">
+            <Setter Property="RenderTransform" Value="translateY(-3px)" />
         </Style>
 
         <!-- Quick-action rows -->
@@ -145,9 +183,11 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
         </Style>
         <Style Selector="Button.bare:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
+            <!-- Translucent overlay so it reads on white and on colored (tab) backgrounds. -->
+            <Setter Property="Background" Value="#14000000" />
         </Style>
 
         <!-- Scrim behind the modal (fades in/out) -->
@@ -335,13 +375,6 @@
                             <Path Classes="icon" Width="19" Height="19"
                                   Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
                             <TextBlock Text="Orders" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Customers">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Path Classes="icon" Width="19" Height="19"
-                                  Data="M9 9 a3 3 0 1 0 0.01 0 M3.5 19 a5.5 5.5 0 0 1 11 0 M16 7 a2.5 2.5 0 0 1 0 5 M17 19 a5 5 0 0 0 -3 -4.5" />
-                            <TextBlock Text="Customers" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                     <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Reports">
