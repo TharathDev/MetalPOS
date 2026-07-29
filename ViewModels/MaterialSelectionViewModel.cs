@@ -357,6 +357,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [ObservableProperty]
     public partial string StockStatus { get; set; } = "Ready.";
 
+    /// <summary>Controls the slide-in add/edit form drawer on the Stock screen.</summary>
+    [ObservableProperty]
+    public partial bool IsStockFormOpen { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEditing))]
     [NotifyPropertyChangedFor(nameof(FormTitle))]
@@ -382,6 +386,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             StockItems.Add(p);
     }
 
+    /// <summary>Resets the form fields (used by the drawer's "Clear" button).</summary>
     [RelayCommand]
     private void NewProduct()
     {
@@ -395,6 +400,18 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         FormStockText = string.Empty;
         StockStatus = "Enter details for a new metal object.";
     }
+
+    /// <summary>Opens the drawer with a blank form to create a new metal object.</summary>
+    [RelayCommand]
+    private void OpenAddProduct()
+    {
+        NewProduct();
+        IsStockFormOpen = true;
+    }
+
+    /// <summary>Closes the add/edit drawer without saving.</summary>
+    [RelayCommand]
+    private void CloseStockForm() => IsStockFormOpen = false;
 
     [RelayCommand]
     private void EditProductRow(Product? product)
@@ -410,6 +427,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         FormPriceText = product.Price.ToString("0.00", CultureInfo.CurrentCulture);
         FormStockText = product.Stock.ToString(CultureInfo.CurrentCulture);
         StockStatus = $"Editing \"{product.Name} {product.Dimension}\".";
+        IsStockFormOpen = true;
     }
 
     [RelayCommand]
@@ -448,20 +466,23 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             Stock = stock,
         };
 
+        string message;
         if (EditingProductId == 0)
         {
             var id = _db.AddProduct(product);
-            StockStatus = $"Added \"{product.Name} {product.Dimension}\" (#{id}).";
+            message = $"Added \"{product.Name} {product.Dimension}\" (#{id}).";
         }
         else
         {
             _db.UpdateProduct(product);
-            StockStatus = $"Updated \"{product.Name} {product.Dimension}\".";
+            message = $"Updated \"{product.Name} {product.Dimension}\".";
         }
 
         NewProduct();
+        IsStockFormOpen = false;
         LoadStock();
         LoadCategories();
+        StockStatus = message;
     }
 
     [RelayCommand]
@@ -471,7 +492,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             return;
         _db.DeleteProduct(product.Id);
         if (EditingProductId == product.Id)
+        {
             NewProduct();
+            IsStockFormOpen = false;
+        }
         StockStatus = $"Deleted \"{product.Name} {product.Dimension}\".";
         LoadStock();
         LoadCategories();
@@ -483,6 +507,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         ActiveSection = "Stock";
         NewProduct();
+        IsStockFormOpen = true;
         StockStatus = "Create a custom metal object: set a new category name and details.";
     }
 

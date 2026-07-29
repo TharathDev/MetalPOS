@@ -508,11 +508,26 @@
                         </StackPanel>
 
                         <!-- ============ STOCK MANAGEMENT SECTION ============ -->
-                        <Grid IsVisible="{Binding IsStockSection}" Margin="0,22,0,0"
-                              ColumnDefinitions="*,340" ColumnSpacing="24">
+                        <StackPanel IsVisible="{Binding IsStockSection}" Margin="0,22,0,0" Spacing="14">
+
+                            <!-- Toolbar: status + add button -->
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <TextBlock Grid.Column="0" Text="{Binding StockStatus}" FontSize="13"
+                                           Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" Margin="2,0,12,0" />
+                                <Button Grid.Column="1" Classes="accent" Padding="14,10"
+                                        Command="{Binding OpenAddProductCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon" Width="16" Height="16" Stroke="White"
+                                              Data="M12 5 V19 M5 12 H19" />
+                                        <TextBlock Classes="mono" Text="ADD ITEM" FontWeight="Bold"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
 
                             <!-- Stock table -->
-                            <Border Grid.Column="0" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
                                     CornerRadius="12" Padding="0">
                                 <DockPanel>
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,90,70,80,84"
@@ -574,63 +589,7 @@
                                 </DockPanel>
                             </Border>
 
-                            <!-- Add / edit form -->
-                            <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                    CornerRadius="12" Padding="18" VerticalAlignment="Top">
-                                <StackPanel Spacing="10">
-                                    <TextBlock Text="{Binding FormTitle}" FontFamily="Georgia, serif" FontSize="18"
-                                               FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
-
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Classes="fieldLabel" Text="CATEGORY" />
-                                        <TextBox Classes="field" Text="{Binding FormCategory}"
-                                                 PlaceholderText="e.g. Steel, Copper, Aluminium" />
-                                    </StackPanel>
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Classes="fieldLabel" Text="MATERIAL / NAME" />
-                                        <TextBox Classes="field" Text="{Binding FormName}"
-                                                 PlaceholderText="e.g. Alloy Steel Grade A36" />
-                                    </StackPanel>
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Classes="fieldLabel" Text="DIMENSION / SPEC" />
-                                        <TextBox Classes="field" Text="{Binding FormDimension}"
-                                                 PlaceholderText="e.g. 2&quot; x 4&quot;" />
-                                    </StackPanel>
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                        <StackPanel Grid.Column="0" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="UNIT" />
-                                            <ComboBox Classes="field" ItemsSource="{Binding Units}"
-                                                      SelectedItem="{Binding FormUnit}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="SKU" />
-                                            <TextBox Classes="field" Text="{Binding FormSku}" PlaceholderText="optional" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                        <StackPanel Grid.Column="0" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="PRICE" />
-                                            <TextBox Classes="field" Text="{Binding FormPriceText}" PlaceholderText="0.00" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="STOCK QTY" />
-                                            <TextBox Classes="field" Text="{Binding FormStockText}" PlaceholderText="0" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,4,0,0">
-                                        <Button Grid.Column="0" Classes="accent" Padding="12,11"
-                                                Command="{Binding SaveProductCommand}"
-                                                Content="{Binding SaveButtonLabel}" />
-                                        <Button Grid.Column="1" Classes="ghost" Command="{Binding NewProductCommand}"
-                                                Content="Clear" />
-                                    </Grid>
-
-                                    <TextBlock Text="{Binding StockStatus}" FontSize="12" TextWrapping="Wrap"
-                                               Foreground="{StaticResource TextMuted}" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                        </StackPanel>
 
                         <!-- ============ ORDERS / HISTORY SECTION ============ -->
                         <StackPanel IsVisible="{Binding IsOrdersSection}" Margin="0,22,0,0" Spacing="12">
@@ -982,6 +941,97 @@
                             </ScrollViewer>
                         </DockPanel>
                     </Grid>
+                </DockPanel>
+            </Border>
+        </Panel>
+
+        <!-- ===== Modal drawer: Add / Edit Stock Item ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsStockFormOpen}"
+               ClipToBounds="True">
+            <!-- Scrim (click to close) -->
+            <Button Classes="scrim" Classes.open="{Binding IsStockFormOpen}"
+                    Command="{Binding CloseStockFormCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <!-- Drawer -->
+            <Border Classes="drawer" Classes.open="{Binding IsStockFormOpen}"
+                    Width="440" HorizontalAlignment="Right" Background="White"
+                    BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                    BoxShadow="-8 0 30 0 #1A000000">
+                <DockPanel>
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,20,0">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="mono" Text="INVENTORY" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <TextBlock Text="{Binding FormTitle}" FontFamily="Georgia, serif" FontSize="22"
+                                       FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
+                                Command="{Binding CloseStockFormCommand}" Width="30" Height="30">
+                            <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
+                        </Button>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" Margin="0,16,0,0" />
+
+                    <!-- Footer actions -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                            Padding="24,16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="{Binding StockStatus}" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <Button Grid.Column="0" Classes="accent" Padding="12,12"
+                                        Command="{Binding SaveProductCommand}"
+                                        Content="{Binding SaveButtonLabel}" />
+                                <Button Grid.Column="1" Classes="ghost" Command="{Binding NewProductCommand}"
+                                        Content="Clear" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Body: form fields -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="24,18,24,0">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="fieldLabel" Text="CATEGORY" />
+                                <TextBox Classes="field" Text="{Binding FormCategory}"
+                                         PlaceholderText="e.g. Steel, Copper, Aluminium" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="fieldLabel" Text="MATERIAL / NAME" />
+                                <TextBox Classes="field" Text="{Binding FormName}"
+                                         PlaceholderText="e.g. Alloy Steel Grade A36" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="fieldLabel" Text="DIMENSION / SPEC" />
+                                <TextBox Classes="field" Text="{Binding FormDimension}"
+                                         PlaceholderText="e.g. 2&quot; x 4&quot;" />
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="UNIT" />
+                                    <ComboBox Classes="field" ItemsSource="{Binding Units}"
+                                              SelectedItem="{Binding FormUnit}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="SKU" />
+                                    <TextBox Classes="field" Text="{Binding FormSku}" PlaceholderText="optional" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="PRICE" />
+                                    <TextBox Classes="field" Text="{Binding FormPriceText}" PlaceholderText="0.00" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="STOCK QTY" />
+                                    <TextBox Classes="field" Text="{Binding FormStockText}" PlaceholderText="0" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Panel>
