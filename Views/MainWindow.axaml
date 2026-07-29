@@ -1,0 +1,825 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PosApp.ViewModels"
+        xmlns:models="using:PosApp.Models"
+        xmlns:conv="using:PosApp.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="820"
+        x:Class="PosApp.Views.MainWindow"
+        x:DataType="vm:MaterialSelectionViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1200" Height="820"
+        MinWidth="1040" MinHeight="680"
+        Background="White"
+        Title="METALS_POS - Inventory Manager">
+
+    <Design.DataContext>
+        <vm:MaterialSelectionViewModel />
+    </Design.DataContext>
+
+    <!-- ================= Resources ================= -->
+    <Window.Resources>
+        <SolidColorBrush x:Key="Accent" Color="#C2410C" />
+        <SolidColorBrush x:Key="AccentDark" Color="#9A3412" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#1F2937" />
+        <SolidColorBrush x:Key="TextMuted" Color="#6B7280" />
+        <SolidColorBrush x:Key="TextFaint" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="HairLine" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="Danger" Color="#DC2626" />
+        <SolidColorBrush x:Key="PeachTile" Color="#FBE3D3" />
+        <SolidColorBrush x:Key="BlueTile" Color="#E6ECF4" />
+        <SolidColorBrush x:Key="ChipBg" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="LavenderPill" Color="#ECEBFB" />
+        <SolidColorBrush x:Key="LavenderText" Color="#5B54C9" />
+
+        <!-- Active-tab background/foreground (compares SelectedTab to the tab name) -->
+        <conv:EqualityToBrushConverter x:Key="TabBg" TrueBrush="#C2410C" FalseBrush="Transparent" />
+        <conv:EqualityToBrushConverter x:Key="TabFg" TrueBrush="White" FalseBrush="#6B7280" />
+        <!-- Selected dimension row highlight (compares ListBoxItem.IsSelected to True) -->
+        <conv:EqualityToBrushConverter x:Key="RowBg" TrueBrush="#FDF3EE" FalseBrush="White" />
+        <conv:EqualityToBrushConverter x:Key="RowBorder" TrueBrush="#C2410C" FalseBrush="#E5E7EB" />
+    </Window.Resources>
+
+    <!-- ================= Styles ================= -->
+    <Window.Styles>
+        <Style Selector="TextBlock.mono">
+            <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
+            <Setter Property="LetterSpacing" Value="1.2" />
+        </Style>
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontFamily" Value="Georgia, serif" />
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        </Style>
+        <Style Selector="TextBlock.cardTitle">
+            <Setter Property="FontFamily" Value="Georgia, serif" />
+            <Setter Property="FontSize" Value="21" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        </Style>
+
+        <!-- Line-icon defaults -->
+        <Style Selector="Path.icon">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="1.7" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="Stroke" Value="{StaticResource TextMuted}" />
+        </Style>
+
+        <!-- Sidebar nav buttons -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,9" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#F3F4F6" />
+        </Style>
+        <Style Selector="Button.nav.active">
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- Accent (primary) buttons -->
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+        </Style>
+
+        <!-- Header pills -->
+        <Style Selector="Button.pill">
+            <Setter Property="Background" Value="{StaticResource ChipBg}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+
+        <!-- Category card buttons -->
+        <Style Selector="Button.categoryCard">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="MinHeight" Value="228" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.categoryCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+
+        <!-- Quick-action rows -->
+        <Style Selector="Button.quickAction">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,11" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.quickAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FAFAFA" />
+        </Style>
+
+        <!-- Transparent button (icon buttons, tab click surface, scrim) -->
+        <Style Selector="Button.bare">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="Button.bare:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- Scrim behind the modal (fades in/out) -->
+        <Style Selector="Button.scrim">
+            <Setter Property="Background" Value="#4D1F2937" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.28" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.scrim.open">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.scrim:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#4D1F2937" />
+        </Style>
+
+        <!-- Drawer slides in from the right -->
+        <Style Selector="Border.drawer">
+            <Setter Property="RenderTransform" Value="translateX(520px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.drawer.open">
+            <Setter Property="RenderTransform" Value="translateX(0)" />
+        </Style>
+
+        <!-- Small per-row ADD TO CART button -->
+        <Style Selector="Button.rowAdd">
+            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.rowAdd:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+        </Style>
+
+        <!-- Dimension ListBox: strip default selection chrome so our row Border shows through -->
+        <Style Selector="ListBox.dims">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.dims ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="ListBox.dims ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.dims ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- Technical documentation links -->
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </Window.Styles>
+
+    <!-- ================= Layout ================= -->
+    <Grid ColumnDefinitions="248,*">
+
+        <!-- ===== Sidebar ===== -->
+        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="18,20">
+                <!-- Logo -->
+                <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="6,0,0,26">
+                    <TextBlock Classes="mono" Text="METALS_POS" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource Accent}" />
+                    <TextBlock Classes="mono" Text="INVENTORY MANAGER" FontSize="11"
+                               Foreground="{StaticResource TextFaint}" />
+                </StackPanel>
+
+                <!-- Bottom block: divider, settings, new sale -->
+                <StackPanel DockPanel.Dock="Bottom" Spacing="12">
+                    <Border Height="1" Background="{StaticResource HairLine}" Margin="0,0,0,4" />
+                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Settings">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Path Classes="icon" Width="19" Height="19"
+                                  Data="M12 8 a4 4 0 1 0 0.01 0 M12 3 V6 M12 18 V21 M3 12 H6 M18 12 H21 M5.6 5.6 L7.7 7.7 M16.3 16.3 L18.4 18.4 M18.4 5.6 L16.3 7.7 M7.7 16.3 L5.6 18.4" />
+                            <TextBlock Text="Settings" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="accent" Command="{Binding NewSaleCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                            <Path Classes="icon" Width="18" Height="18" Stroke="White" Data="M12 5 V19 M5 12 H19" />
+                            <TextBlock Classes="mono" Text="NEW SALE" FontWeight="Bold" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Nav items -->
+                <StackPanel DockPanel.Dock="Top" Spacing="4">
+                    <Button Classes="nav active" Command="{Binding SelectSectionCommand}" CommandParameter="Inventory">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Path Classes="icon" Width="19" Height="19" Stroke="{StaticResource Accent}"
+                                  Data="M4 4 H20 V20 H4 Z M4 9 H20 M9 4 V9" />
+                            <TextBlock Text="Inventory" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Orders">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Path Classes="icon" Width="19" Height="19"
+                                  Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                            <TextBlock Text="Orders" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Customers">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Path Classes="icon" Width="19" Height="19"
+                                  Data="M9 9 a3 3 0 1 0 0.01 0 M3.5 19 a5.5 5.5 0 0 1 11 0 M16 7 a2.5 2.5 0 0 1 0 5 M17 19 a5 5 0 0 0 -3 -4.5" />
+                            <TextBlock Text="Customers" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Reports">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Path Classes="icon" Width="19" Height="19"
+                                  Data="M4 20 H21 M6 20 V12 M11 20 V5 M16 20 V9" />
+                            <TextBlock Text="Reports" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== Right of sidebar ===== -->
+        <DockPanel Grid.Column="1">
+
+            <!-- Top bar -->
+            <Border DockPanel.Dock="Top" BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,0,1"
+                    Padding="24,14">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <!-- Search -->
+                    <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource HairLine}"
+                            BorderThickness="1" CornerRadius="10" Padding="12,0" MaxWidth="620"
+                            HorizontalAlignment="Stretch">
+                        <Grid ColumnDefinitions="Auto,*" Height="42">
+                            <Path Grid.Column="0" Classes="icon" Width="17" Height="17" Margin="2,0,10,0"
+                                  Data="M10 4 a6 6 0 1 0 0.01 0 M15 15 L20 20" />
+                            <TextBox Grid.Column="1" Text="{Binding SearchText}"
+                                     PlaceholderText="Search materials, SKU, or categories..."
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center"
+                                     VerticalContentAlignment="Center" FontSize="14" Padding="0" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Bell -->
+                    <Panel Grid.Column="1" Margin="22,0,20,0" VerticalAlignment="Center" Width="24" Height="24">
+                        <Path Classes="icon" Width="22" Height="22"
+                              Data="M12 4 C9 4 8 6 8 9 C8 13 6 15 6 15 H18 C18 15 16 13 16 9 C16 6 15 4 12 4 Z M10 18 a2 2 0 0 0 4 0" />
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource Accent}" Stroke="White" StrokeThickness="1.2"
+                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-1,-1,0" />
+                    </Panel>
+
+                    <!-- User -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="34" Height="34" CornerRadius="17" Background="{StaticResource ChipBg}">
+                            <Path Classes="icon" Width="18" Height="18"
+                                  Data="M12 8 a3 3 0 1 0 0.01 0 M6 19 a6 6 0 0 1 12 0" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Admin User" FontSize="13" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Classes="mono" Text="WAREHOUSE A" FontSize="10"
+                                       Foreground="{StaticResource TextFaint}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content: main + right specs panel -->
+            <Grid ColumnDefinitions="*,300">
+
+                <!-- Main content -->
+                <ScrollViewer Grid.Column="0" Padding="28,24" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- Header row -->
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <TextBlock Classes="h1" Text="Material Selection" />
+                                <TextBlock Text="Select a category to view specific stock dimensions and pricing."
+                                           FontSize="14" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                                           MaxWidth="420" HorizontalAlignment="Left" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
+                                <Button Classes="pill">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon" Width="15" Height="15"
+                                              Data="M12 6 a6 6 0 1 0 0.01 0 M12 8 V12 L15 14" />
+                                        <TextBlock Classes="mono" Text="{Binding SyncLabel}" FontSize="11"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="pill" Background="{StaticResource LavenderPill}"
+                                        Foreground="{StaticResource LavenderText}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon" Width="15" Height="15" Stroke="{StaticResource LavenderText}"
+                                              Data="M13 3 L6 14 H11 L10 21 L18 9 H13 Z" />
+                                        <TextBlock Classes="mono" Text="LIVE INVENTORY" FontSize="11"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Category grid -->
+                        <ItemsControl Margin="0,24,0,0">
+                            <ItemsControl.Styles>
+                                <Style Selector="ItemsControl">
+                                    <Setter Property="ItemsPanel">
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3" />
+                                        </ItemsPanelTemplate>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.Styles>
+
+                            <!-- Steel -->
+                            <Button Classes="categoryCard" Margin="0,0,16,16"
+                                    Command="{Binding SelectCategoryCommand}" CommandParameter="Steel">
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="{StaticResource PeachTile}">
+                                            <Path Classes="icon" Width="24" Height="24" Stroke="{StaticResource Accent}"
+                                                  Data="M12 5 L7 19 M12 5 L17 19 M9.2 13 H14.8 M12 4 a1 1 0 1 0 0.01 0" />
+                                        </Border>
+                                        <Border Grid.Column="2" VerticalAlignment="Top" Background="{StaticResource ChipBg}"
+                                                CornerRadius="6" Padding="8,4">
+                                            <TextBlock Classes="mono" Text="142 SKUs" FontSize="11"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                        <TextBlock Classes="cardTitle" Text="Steel" />
+                                        <TextBlock Text="H-Beams, Rebar, Sheets, and Structural Steel Components."
+                                                   FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                                            Padding="0,10,0,0" Margin="0,14,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15"
+                                                  Data="M4 15 L10 9 L13 12 L20 5 M15 5 H20 V10" />
+                                            <TextBlock Text="Prices updated 4h ago" FontSize="12"
+                                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Button>
+
+                            <!-- Iron -->
+                            <Button Classes="categoryCard" Margin="0,0,16,16"
+                                    Command="{Binding SelectCategoryCommand}" CommandParameter="Iron">
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="{StaticResource BlueTile}">
+                                            <Path Classes="icon" Width="24" Height="24" Stroke="#3B5573"
+                                                  Data="M5 5 H10 V10 H5 Z M14 5 H19 V10 H14 Z M5 14 H10 V19 H5 Z M14 14 H19 V19 H14 Z" />
+                                        </Border>
+                                        <Border Grid.Column="2" VerticalAlignment="Top" Background="{StaticResource ChipBg}"
+                                                CornerRadius="6" Padding="8,4">
+                                            <TextBlock Classes="mono" Text="86 SKUs" FontSize="11"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                        <TextBlock Classes="cardTitle" Text="Iron" />
+                                        <TextBlock Text="Cast Iron Pipes, Ornaments, and Raw Industrial Castings."
+                                                   FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                                            Padding="0,10,0,0" Margin="0,14,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15"
+                                                  Data="M5 12 L10 17 L19 7" />
+                                            <TextBlock Text="High Stock Availability" FontSize="12"
+                                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Button>
+
+                            <!-- Roofing -->
+                            <Button Classes="categoryCard" Margin="0,0,0,16"
+                                    Command="{Binding SelectCategoryCommand}" CommandParameter="Roofing">
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="{StaticResource PeachTile}">
+                                            <Path Classes="icon" Width="24" Height="24" Stroke="{StaticResource Accent}"
+                                                  Data="M4 11 L12 4 L20 11 M6 10 V20 H18 V10" />
+                                        </Border>
+                                        <Border Grid.Column="2" VerticalAlignment="Top" Background="{StaticResource ChipBg}"
+                                                CornerRadius="6" Padding="8,4">
+                                            <TextBlock Classes="mono" Text="210 SKUs" FontSize="11"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                        <TextBlock Classes="cardTitle" Text="Roofing" />
+                                        <TextBlock Text="Corrugated Sheets, Shingles, Gutters, and Flashing."
+                                                   FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                                            Padding="0,10,0,0" Margin="0,14,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15" Stroke="{StaticResource Danger}"
+                                                  Data="M12 5 V13 M12 17 h0.01" />
+                                            <TextBlock Text="Low stock in Zinc sheets" FontSize="12"
+                                                       Foreground="{StaticResource Danger}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Button>
+
+                            <!-- Tools -->
+                            <Button Classes="categoryCard" Margin="0,0,16,0"
+                                    Command="{Binding SelectCategoryCommand}" CommandParameter="Tools">
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="{StaticResource BlueTile}">
+                                            <Path Classes="icon" Width="24" Height="24" Stroke="#3B5573"
+                                                  Data="M14.5 4 a4 4 0 0 0 -5.3 5.3 L4 14.5 L6 16.5 L11.2 11.3 a4 4 0 0 0 5.3 -5.3 L13.5 9 L11 6.5 Z" />
+                                        </Border>
+                                        <Border Grid.Column="2" VerticalAlignment="Top" Background="{StaticResource ChipBg}"
+                                                CornerRadius="6" Padding="8,4">
+                                            <TextBlock Classes="mono" Text="345 SKUs" FontSize="11"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                        <TextBlock Classes="cardTitle" Text="Tools" />
+                                        <TextBlock Text="Industrial Cutting, Welding Equipment, and Power Tools."
+                                                   FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                                            Padding="0,10,0,0" Margin="0,14,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15"
+                                                  Data="M12 4 a5 5 0 1 0 0.01 0 M9.5 12 L11.5 14 L15 10" />
+                                            <TextBlock Text="Premium Warranty Brands" FontSize="12"
+                                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Button>
+
+                            <!-- Hardware -->
+                            <Button Classes="categoryCard" Margin="0,0,16,0"
+                                    Command="{Binding SelectCategoryCommand}" CommandParameter="Hardware">
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="{StaticResource PeachTile}">
+                                            <Path Classes="icon" Width="24" Height="24" Stroke="{StaticResource Accent}"
+                                                  Data="M8 8 L12 6 L16 8 L16 12.5 L12 14.5 L8 12.5 Z M12 6 V14.5 M12 14.5 V19" />
+                                        </Border>
+                                        <Border Grid.Column="2" VerticalAlignment="Top" Background="{StaticResource ChipBg}"
+                                                CornerRadius="6" Padding="8,4">
+                                            <TextBlock Classes="mono" Text="1,200+ SKUs" FontSize="11"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                        <TextBlock Classes="cardTitle" Text="Hardware" />
+                                        <TextBlock Text="Fasteners, Bolts, Hinges, and Small Metal Components."
+                                                   FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                                            Padding="0,10,0,0" Margin="0,14,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15"
+                                                  Data="M5 5 H12 L19 12 L12 19 L5 12 Z M8.5 8.5 h0.01" />
+                                            <TextBlock Text="Bulk Discounts Available" FontSize="12"
+                                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Button>
+
+                            <!-- Add custom category (dashed) -->
+                            <Button Classes="categoryCard" Background="Transparent" BorderThickness="0" Padding="0"
+                                    Command="{Binding AddCustomCategoryCommand}">
+                                <Grid>
+                                    <Rectangle RadiusX="12" RadiusY="12" Fill="#F4F4F5" Stroke="#D1D5DB"
+                                               StrokeThickness="1.5" StrokeDashArray="4,3" />
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="White"
+                                                BorderBrush="{StaticResource HairLine}" BorderThickness="1">
+                                            <Path Classes="icon" Width="22" Height="22" Stroke="{StaticResource TextMuted}"
+                                                  Data="M12 5 V19 M5 12 H19" />
+                                        </Border>
+                                        <TextBlock Text="Add Custom Category" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Right specs panel -->
+                <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0">
+                    <DockPanel Margin="20,24">
+                        <!-- Add to cart pinned bottom -->
+                        <Button DockPanel.Dock="Bottom" Classes="accent" Command="{Binding AddToCartCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <Path Classes="icon" Width="18" Height="18" Stroke="White"
+                                      Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                                <TextBlock Classes="mono" Text="ADD TO CART" FontWeight="Bold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <StackPanel DockPanel.Dock="Top">
+                            <TextBlock Classes="mono" Text="MATERIAL SPECS" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Text="{Binding DetailSubtitle}" FontSize="13" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextMuted}" Margin="0,6,0,16" />
+
+                            <!-- Placeholder box -->
+                            <Border Background="#F7F7F8" CornerRadius="10" Padding="18" Height="180">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="White"
+                                            BorderBrush="{StaticResource HairLine}" BorderThickness="1">
+                                        <Path Classes="icon" Width="20" Height="20"
+                                              Data="M12 5 a7 7 0 1 0 0.01 0 M12 11 V16 M12 8 h0.01" />
+                                    </Border>
+                                    <TextBlock Text="Live Technical Specifications and Dimension Calculator will appear here."
+                                               FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="200"
+                                               Foreground="{StaticResource TextMuted}" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Classes="mono" Text="QUICK ACTIONS" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimary}" Margin="0,24,0,10" />
+
+                            <Button Classes="quickAction" Command="{Binding OpenHistoryCommand}" Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Path Grid.Column="0" Classes="icon" Width="18" Height="18"
+                                          Data="M12 6 a6 6 0 1 0 0.01 0 M12 8 V12 L15 14 M4 8 L6.5 6.5" />
+                                    <TextBlock Grid.Column="1" Text="History" Margin="12,0,0,0" VerticalAlignment="Center"
+                                               FontSize="14" Foreground="{StaticResource TextPrimary}" />
+                                    <Path Grid.Column="2" Classes="icon" Width="16" Height="16" Data="M9 6 L15 12 L9 18" />
+                                </Grid>
+                            </Button>
+
+                            <Button Classes="quickAction" Command="{Binding OpenShipmentsCommand}">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Path Grid.Column="0" Classes="icon" Width="18" Height="18"
+                                          Data="M3 6 H15 V16 H3 Z M15 9 H19 L21 12 V16 H15 M6.5 18 a1.5 1.5 0 1 0 0.01 0 M17 18 a1.5 1.5 0 1 0 0.01 0" />
+                                    <TextBlock Grid.Column="1" Text="Shipments" Margin="12,0,0,0" VerticalAlignment="Center"
+                                               FontSize="14" Foreground="{StaticResource TextPrimary}" />
+                                    <Path Grid.Column="2" Classes="icon" Width="16" Height="16" Data="M9 6 L15 12 L9 18" />
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </DockPanel>
+
+        <!-- ===== Modal drawer: Select Dimensions ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsDetailOpen}"
+               ClipToBounds="True">
+            <!-- Scrim (click to close) -->
+            <Button Classes="scrim" Classes.open="{Binding IsDetailOpen}"
+                    Command="{Binding CloseDetailCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <!-- Drawer -->
+            <Border Classes="drawer" Classes.open="{Binding IsDetailOpen}"
+                    Width="480" HorizontalAlignment="Right" Background="White"
+                    BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                    BoxShadow="-8 0 30 0 #1A000000">
+                <DockPanel Margin="0">
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,20,0">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="mono" Text="MATERIAL SPECS" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <TextBlock Text="Select Dimensions" FontFamily="Georgia, serif" FontSize="22"
+                                       FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Text="{Binding DetailMaterialName}" FontSize="13"
+                                       Foreground="{StaticResource TextMuted}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
+                                Command="{Binding CloseDetailCommand}" Width="30" Height="30">
+                            <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Tabs -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto" Margin="24,18,24,0" ColumnSpacing="10">
+                        <Panel Grid.Column="0">
+                            <Border CornerRadius="0"
+                                    Background="{Binding SelectedTab, Converter={StaticResource TabBg}, ConverterParameter=Selection}" />
+                            <Button Classes="bare" Command="{Binding SetTabCommand}" CommandParameter="Selection"
+                                    Padding="18,10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon" Width="15" Height="15"
+                                          Stroke="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Selection}"
+                                          Data="M5 12 L10 17 L19 7" />
+                                    <TextBlock Classes="mono" Text="Selection" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Selection}" />
+                                </StackPanel>
+                            </Button>
+                        </Panel>
+                        <Panel Grid.Column="1">
+                            <Border CornerRadius="0"
+                                    Background="{Binding SelectedTab, Converter={StaticResource TabBg}, ConverterParameter=Cart}" />
+                            <Button Classes="bare" Command="{Binding SetTabCommand}" CommandParameter="Cart"
+                                    Padding="18,10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="icon" Width="15" Height="15"
+                                          Stroke="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Cart}"
+                                          Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                                    <TextBlock Classes="mono" Text="{Binding CartTabLabel}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Cart}" />
+                                </StackPanel>
+                            </Button>
+                        </Panel>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" Margin="0,16,0,0" />
+
+                    <!-- Bottom action bar -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                            Padding="24,16">
+                        <Panel>
+                            <Button Classes="accent" CornerRadius="0" IsVisible="{Binding IsSelectionTab}"
+                                    HorizontalAlignment="Stretch" Command="{Binding AddSelectedToCartCommand}">
+                                <TextBlock Text="Add to Cart" FontWeight="Bold" />
+                            </Button>
+                            <Button Classes="accent" CornerRadius="0" IsVisible="{Binding IsCartTab}"
+                                    HorizontalAlignment="Stretch" Command="{Binding CheckoutCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <TextBlock Text="Checkout" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />
+                                </StackPanel>
+                            </Button>
+                        </Panel>
+                    </Border>
+
+                    <!-- Body -->
+                    <Grid Margin="24,18,24,0">
+                        <!-- Selection tab -->
+                        <ScrollViewer IsVisible="{Binding IsSelectionTab}" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel>
+                                <ListBox Classes="dims" ItemsSource="{Binding Dimensions}"
+                                         SelectedItem="{Binding SelectedDimension}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DimensionOption">
+                                            <Border CornerRadius="0" BorderThickness="1" Padding="12"
+                                                    Background="{Binding $parent[ListBoxItem].IsSelected, Converter={StaticResource RowBg}, ConverterParameter=True}"
+                                                    BorderBrush="{Binding $parent[ListBoxItem].IsSelected, Converter={StaticResource RowBorder}, ConverterParameter=True}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" >
+                                                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="0"
+                                                            Background="{StaticResource ChipBg}" VerticalAlignment="Center">
+                                                        <Path Classes="icon" Width="22" Height="22"
+                                                              Data="M4 9 H20 M4 9 L6 6 H18 L20 9 M4 9 V16 H20 V9 M9 9 V16 M14 9 V16" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Spacing="3" Margin="12,0,0,0"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DimensionLabel}" FontSize="14"
+                                                                   FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock Text="{Binding StockLabel}" FontSize="12"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding PriceLabel}" FontSize="14"
+                                                               FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
+                                                               VerticalAlignment="Center" Margin="10,0,14,0" />
+                                                    <Button Grid.Column="3" Classes="rowAdd" VerticalAlignment="Center"
+                                                            Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).AddDimensionToCartCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="mono" Text="ADD TO CART" FontSize="10" FontWeight="Bold" />
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Technical documentation -->
+                                <TextBlock Classes="mono" Text="TECHNICAL DOCUMENTATION" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource TextMuted}" Margin="2,12,0,10" />
+                                <Button Classes="link" Command="{Binding OpenDocumentCommand}"
+                                        CommandParameter="{Binding DocSheetLabel}" Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon" Width="16" Height="16" Stroke="{StaticResource Accent}"
+                                              Data="M7 3 H14 L18 7 V21 H7 Z M14 3 V7 H18 M9.5 12 H15 M9.5 15.5 H15" />
+                                        <TextBlock Text="{Binding DocSheetLabel}" FontSize="13"
+                                                   Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="link" Command="{Binding OpenDocumentCommand}"
+                                        CommandParameter="Certification of Compliance">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon" Width="16" Height="16" Stroke="{StaticResource Accent}"
+                                              Data="M12 4 a5 5 0 1 0 0.01 0 M9.5 12 L11.5 14 L15 10" />
+                                        <TextBlock Text="Certification of Compliance" FontSize="13"
+                                                   Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Cart tab -->
+                        <DockPanel IsVisible="{Binding IsCartTab}">
+                            <TextBlock DockPanel.Dock="Top" IsVisible="{Binding IsCartEmpty}"
+                                       Text="Your cart is empty. Add dimensions from the Selection tab."
+                                       FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                                       Margin="2,4,0,0" />
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding Cart}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:CartLine">
+                                            <Border CornerRadius="0" BorderBrush="{StaticResource HairLine}"
+                                                    BorderThickness="1" Padding="12" Margin="0,0,0,12">
+                                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                                    <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Material}" FontSize="14" FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock Text="{Binding Dimension}" FontSize="12"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                        <TextBlock Text="{Binding UnitPriceLabel}" FontSize="12"
+                                                                   Foreground="{StaticResource TextFaint}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                                VerticalAlignment="Center" Margin="8,0,12,0">
+                                                        <Button Classes="bare" Width="26" Height="26"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).DecrementLineCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <Path Classes="icon" Width="14" Height="14" Data="M5 12 H19" />
+                                                        </Button>
+                                                        <TextBlock Text="{Binding Quantity}" Width="24" TextAlignment="Center"
+                                                                   VerticalAlignment="Center" FontSize="14" />
+                                                        <Button Classes="bare" Width="26" Height="26"
+                                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).IncrementLineCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <Path Classes="icon" Width="14" Height="14" Data="M12 5 V19 M5 12 H19" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding LineTotalLabel}" FontSize="14"
+                                                               FontWeight="Bold" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextPrimary}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Panel>
+    </Grid>
+
+</Window>
