@@ -47,7 +47,7 @@ public class TursoSyncService
     {
         _db = db;
 
-        var url = Environment.GetEnvironmentVariable("TURSO_DATABASE_URL");
+        var url = EnvConfig.Get("TURSO_URL", "TURSO_DATABASE_URL");
         if (string.IsNullOrWhiteSpace(url))
             url = DefaultUrl;
         _httpBase = ToHttpBase(url);
@@ -78,7 +78,7 @@ public class TursoSyncService
 
     private static string? ResolveAuthToken()
     {
-        var token = Environment.GetEnvironmentVariable("TURSO_AUTH_TOKEN");
+        var token = EnvConfig.Get("TURSO_API_KEY", "TURSO_AUTH_TOKEN");
         if (!string.IsNullOrWhiteSpace(token))
             return token.Trim();
 
@@ -109,7 +109,7 @@ public class TursoSyncService
         if (!Enabled)
         {
             Raise(new SyncStatus(false, false, DateTime.Now,
-                "Cloud backup disabled - set TURSO_AUTH_TOKEN to enable."));
+                "Cloud backup disabled - set TURSO_API_KEY (and TURSO_URL) to enable."));
             return;
         }
 
