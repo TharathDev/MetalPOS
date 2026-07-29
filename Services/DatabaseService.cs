@@ -28,6 +28,43 @@ public class DatabaseService
     /// <summary>Full path to the SQLite file, useful for logging/diagnostics.</summary>
     public string DatabasePath => Path.Combine(AppContext.BaseDirectory, "metals_pos.db");
 
+    /// <summary>
+    /// The individual CREATE TABLE statements that define the schema. Shared by
+    /// <see cref="Initialize"/> and the remote backup so the local and remote
+    /// databases always use the exact same structure.
+    /// </summary>
+    public static readonly string[] SchemaStatements =
+    {
+        @"CREATE TABLE IF NOT EXISTS Products (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            Category  TEXT    NOT NULL DEFAULT '',
+            Name      TEXT    NOT NULL,
+            Dimension TEXT    NOT NULL DEFAULT '',
+            Unit      TEXT    NOT NULL DEFAULT 'ea',
+            Barcode   TEXT,
+            Price     REAL    NOT NULL DEFAULT 0,
+            Stock     INTEGER NOT NULL DEFAULT 0
+        )",
+        @"CREATE TABLE IF NOT EXISTS Sales (
+            Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            Timestamp     DATETIME NOT NULL,
+            TotalAmount   REAL     NOT NULL,
+            PaymentMethod TEXT     NOT NULL
+        )",
+        @"CREATE TABLE IF NOT EXISTS SaleItems (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            SaleId    INTEGER NOT NULL,
+            ProductId INTEGER NOT NULL,
+            Quantity  INTEGER NOT NULL,
+            UnitPrice REAL    NOT NULL,
+            FOREIGN KEY (SaleId)    REFERENCES Sales(Id),
+            FOREIGN KEY (ProductId) REFERENCES Products(Id)
+        )",
+    };
+
+    /// <summary>Tables that are included in the remote backup, in FK-safe insert order.</summary>
+    public static readonly string[] BackupTables = { "Products", "Sales", "SaleItems" };
+
     private SqliteConnection OpenConnection()
     {
         var connection = new SqliteConnection(_connectionString);
@@ -46,34 +83,7 @@ public class DatabaseService
     {
         using var connection = OpenConnection();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS Products (
-                Id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                Category  TEXT    NOT NULL DEFAULT '',
-                Name      TEXT    NOT NULL,
-                Dimension TEXT    NOT NULL DEFAULT '',
-                Unit      TEXT    NOT NULL DEFAULT 'ea',
-                Barcode   TEXT,
-                Price     REAL    NOT NULL DEFAULT 0,
-                Stock     INTEGER NOT NULL DEFAULT 0
-            );
-
-            CREATE TABLE IF NOT EXISTS Sales (
-                Id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                Timestamp     DATETIME NOT NULL,
-                TotalAmount   REAL     NOT NULL,
-                PaymentMethod TEXT     NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS SaleItems (
-                Id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                SaleId    INTEGER NOT NULL,
-                ProductId INTEGER NOT NULL,
-                Quantity  INTEGER NOT NULL,
-                UnitPrice REAL    NOT NULL,
-                FOREIGN KEY (SaleId)    REFERENCES Sales(Id),
-                FOREIGN KEY (ProductId) REFERENCES Products(Id)
-            );";
+        cmd.CommandText = string.Join(";\n", SchemaStatements) + ";";
         cmd.ExecuteNonQuery();
 
         SeedProductsIfEmpty(connection);
@@ -220,6 +230,38 @@ public class DatabaseService
             results.Add(ReadProduct(reader));
 
         return results;
+    }
+
+    /// <summary>
+    /// Reads every row of one of the <see cref="BackupTables"/> as raw column
+    /// values, for snapshotting to the remote backup. The table name is validated
+    /// against the whitelist to avoid SQL injection.
+    /// </summary>
+    public (List<string> Columns, List<object?[]> Rows) ExportTable(string table)
+    {
+        if (Array.IndexOf(BackupTables, table) < 0)
+            throw new ArgumentException($"Unknown backup table '{table}'.", nameof(table));
+
+        var columns = new List<string>();
+        var rows = new List<object?[]>();
+
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"SELECT * FROM {table};";
+
+        using var reader = cmd.ExecuteReader();
+        for (var i = 0; i < reader.FieldCount; i++)
+            columns.Add(reader.GetName(i));
+
+        while (reader.Read())
+        {
+            var row = new object?[reader.FieldCount];
+            for (var i = 0; i < reader.FieldCount; i++)
+                row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            rows.Add(row);
+        }
+
+        return (columns, rows);
     }
 
     public Product? GetProductById(long id)

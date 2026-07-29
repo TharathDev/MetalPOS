@@ -19,15 +19,49 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 {
     private readonly DatabaseService _db;
     private readonly ReceiptService _receipt = new();
+    private readonly TursoSyncService? _sync;
 
     public MaterialSelectionViewModel() : this(new DatabaseService()) { }
 
-    public MaterialSelectionViewModel(DatabaseService db)
+    public MaterialSelectionViewModel(DatabaseService db, TursoSyncService? sync = null)
     {
         _db = db;
+        _sync = sync;
         PaymentMethods = new ObservableCollection<string> { "Cash", "Card", "Bank Transfer" };
         Units = new ObservableCollection<string> { "ea", "sheet", "ft", "box", "pair", "kg", "roll" };
+
+        if (_sync is not null)
+        {
+            SyncLabel = _sync.Enabled ? "BACKUP: PENDING" : "BACKUP: OFF";
+            _sync.StatusChanged += OnSyncStatusChanged;
+        }
+
         SafeLoadAll();
+    }
+
+    private void OnSyncStatusChanged(SyncStatus status)
+    {
+        // StatusChanged fires on a background thread; marshal to the UI thread.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            SyncLabel = status switch
+            {
+                { Enabled: false } => "BACKUP: OFF",
+                { Success: true } => $"BACKED UP {status.Time:HH:mm}",
+                _ => "BACKUP FAILED",
+            };
+            BackupStatus = status.Message;
+        });
+    }
+
+    /// <summary>Triggers an immediate backup to the remote server.</summary>
+    [RelayCommand]
+    private async System.Threading.Tasks.Task BackupNow()
+    {
+        if (_sync is null)
+            return;
+        SyncLabel = "BACKING UP...";
+        await _sync.SyncNowAsync().ConfigureAwait(false);
     }
 
     private void SafeLoadAll()
@@ -79,6 +113,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string SyncLabel { get; set; } = "SYNC: LIVE";
+
+    [ObservableProperty]
+    public partial string BackupStatus { get; set; } = "Cloud backup: waiting for first run.";
 
     [ObservableProperty]
     public partial string DetailSubtitle { get; set; } = "Select an item to view details";

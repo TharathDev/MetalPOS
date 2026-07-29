@@ -35,3 +35,14 @@ Thumbs.db
 # Publish output
 publish/
 *.publishsettings
+
+# Local database + backups (runtime data, not source)
+*.db
+*.db-shm
+*.db-wal
+Receipts/
+
+# Secrets - Turso auth token must never be committed
+turso_auth_token.txt
+*.token
+.env

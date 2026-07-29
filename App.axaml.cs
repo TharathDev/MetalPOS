@@ -18,14 +18,19 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Create and initialize the local SQLite database (creates tables + seeds on first run).
-            // Kept ready for the backend phase; the current screen is UI-only.
+            // Local SQLite is the source of truth (creates tables + seeds on first run).
             var database = new DatabaseService();
             database.Initialize();
 
+            // Hourly backup of the local database to the remote Turso (libSQL)
+            // server. No-ops safely when no auth token is configured.
+            var sync = new TursoSyncService(database);
+            sync.StartBackgroundSync(System.TimeSpan.FromHours(1));
+            desktop.ShutdownRequested += (_, _) => sync.Stop();
+
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MaterialSelectionViewModel(database),
+                DataContext = new MaterialSelectionViewModel(database, sync),
             };
         }
 
