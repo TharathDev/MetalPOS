@@ -1,49 +1,132 @@
-using System.Collections.Generic;
+using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PosApp.Models;
+using PosApp.Services;
 
 namespace PosApp.ViewModels;
 
 /// <summary>
-/// Drives the METALS_POS "Material Selection" dashboard and the "Select Dimensions"
-/// modal drawer. UI-only for now: the dimension catalog is sample data and the cart
-/// lives in memory. Everything is structured to be wired to the backend later.
+/// Drives the METALS_POS window: the Inventory dashboard, the Stock management
+/// (insert/update/delete) screen, the Orders history, and the "Select Dimensions"
+/// modal with a live, editable cart + checkout that records the sale and prints a
+/// receipt. All data is backed by the local SQLite database.
 /// </summary>
 public partial class MaterialSelectionViewModel : ViewModelBase
 {
-    // ----- Dashboard state -----
+    private readonly DatabaseService _db;
+    private readonly ReceiptService _receipt = new();
+
+    public MaterialSelectionViewModel() : this(new DatabaseService()) { }
+
+    public MaterialSelectionViewModel(DatabaseService db)
+    {
+        _db = db;
+        PaymentMethods = new ObservableCollection<string> { "Cash", "Card", "Bank Transfer" };
+        Units = new ObservableCollection<string> { "ea", "sheet", "ft", "box", "pair", "kg", "roll" };
+        SafeLoadAll();
+    }
+
+    private void SafeLoadAll()
+    {
+        try
+        {
+            LoadCategories();
+            LoadStock();
+            LoadOrders();
+        }
+        catch
+        {
+            // Design-time / uninitialized DB: keep the previewer alive.
+        }
+    }
+
+    // ==================== Sections ====================
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInventorySection))]
+    [NotifyPropertyChangedFor(nameof(IsStockSection))]
+    [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
+    [NotifyPropertyChangedFor(nameof(SectionTitle))]
+    [NotifyPropertyChangedFor(nameof(SectionSubtitle))]
+    public partial string ActiveSection { get; set; } = "Inventory";
+
+    public bool IsInventorySection => ActiveSection == "Inventory";
+    public bool IsStockSection => ActiveSection == "Stock";
+    public bool IsOrdersSection => ActiveSection is "Orders" or "Reports";
+
+    public string SectionTitle => ActiveSection switch
+    {
+        "Stock" => "Stock Management",
+        "Orders" or "Reports" => "Orders & History",
+        _ => "Material Selection",
+    };
+
+    public string SectionSubtitle => ActiveSection switch
+    {
+        "Stock" => "Insert, update, or delete inventory items and create custom metal objects.",
+        "Orders" or "Reports" => "Review completed sales and reprint receipts.",
+        _ => "Select a category to view specific stock dimensions and pricing.",
+    };
+
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    public partial string ActiveSection { get; set; } = "Inventory";
+    partial void OnSearchTextChanged(string value) => LoadStock();
 
     [ObservableProperty]
-    public partial string SyncLabel { get; set; } = "SYNC: 2M AGO";
+    public partial string SyncLabel { get; set; } = "SYNC: LIVE";
 
     [ObservableProperty]
     public partial string DetailSubtitle { get; set; } = "Select an item to view details";
 
-    // ----- Modal ("Select Dimensions") state -----
+    // ==================== Inventory dashboard ====================
+
+    public ObservableCollection<CategoryInfo> Categories { get; } = new();
+
+    private void LoadCategories()
+    {
+        Categories.Clear();
+        foreach (var c in _db.GetCategories())
+            Categories.Add(c);
+    }
+
+    [RelayCommand]
+    private void SelectSection(string? section)
+    {
+        if (string.IsNullOrWhiteSpace(section))
+            return;
+        ActiveSection = section!;
+        if (IsOrdersSection)
+            LoadOrders();
+        if (IsStockSection)
+            LoadStock();
+        if (IsInventorySection)
+            LoadCategories();
+    }
+
+    // ==================== "Select Dimensions" modal ====================
+
     [ObservableProperty]
     public partial bool IsDetailOpen { get; set; }
 
-    /// <summary>Grade/subtitle shown under the modal title, e.g. "Alloy Steel Grade A36".</summary>
+    [ObservableProperty]
+    public partial string DetailCategory { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial string DetailMaterialName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string DocSheetLabel { get; set; } = "Material Safety Data Sheet (PDF)";
+    public partial string DocSheetLabel { get; set; } = "Material Data Sheet (PDF)";
 
-    public ObservableCollection<DimensionOption> Dimensions { get; } = new();
+    public ObservableCollection<Product> CategoryProducts { get; } = new();
 
     [ObservableProperty]
-    public partial DimensionOption? SelectedDimension { get; set; }
+    public partial Product? SelectedProduct { get; set; }
 
-    /// <summary>Active modal tab: "Selection" or "Cart".</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSelectionTab))]
     [NotifyPropertyChangedFor(nameof(IsCartTab))]
@@ -52,47 +135,28 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsSelectionTab => SelectedTab == "Selection";
     public bool IsCartTab => SelectedTab == "Cart";
 
-    // ----- Cart state -----
-    public ObservableCollection<CartLine> Cart { get; } = new();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CartTotalLabel))]
-    [NotifyCanExecuteChangedFor(nameof(CheckoutCommand))]
-    public partial double CartTotal { get; set; }
-
-    [ObservableProperty]
-    public partial string CartTabLabel { get; set; } = "Cart";
-
-    [ObservableProperty]
-    public partial bool IsCartEmpty { get; set; } = true;
-
-    public string CartTotalLabel => $"${CartTotal:0.00}";
-
-    // ==================== Commands ====================
-
-    [RelayCommand]
-    private void SelectSection(string? section)
-    {
-        if (!string.IsNullOrWhiteSpace(section))
-            ActiveSection = section!;
-    }
-
-    /// <summary>Opens the modal for a category and loads its dimension options.</summary>
     [RelayCommand]
     private void SelectCategory(string? categoryName)
     {
         if (string.IsNullOrWhiteSpace(categoryName))
             return;
 
-        var (subtitle, docLabel, dims) = BuildCatalog(categoryName!);
-        DetailMaterialName = subtitle;
-        DocSheetLabel = docLabel;
+        DetailCategory = categoryName!;
+        DocSheetLabel = $"{categoryName} Material Data Sheet (PDF)";
 
-        Dimensions.Clear();
-        foreach (var d in dims)
-            Dimensions.Add(d);
+        CategoryProducts.Clear();
+        foreach (var p in _db.GetProductsByCategory(categoryName!))
+            CategoryProducts.Add(p);
 
-        SelectedDimension = Dimensions.FirstOrDefault();
+        var materials = CategoryProducts.Select(p => p.Name).Distinct().ToList();
+        DetailMaterialName = materials.Count switch
+        {
+            0 => "No stock in this category yet",
+            1 => materials[0],
+            _ => $"{materials.Count} materials · {CategoryProducts.Count} SKUs",
+        };
+
+        SelectedProduct = CategoryProducts.FirstOrDefault();
         SelectedTab = "Selection";
         IsDetailOpen = true;
     }
@@ -107,16 +171,50 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             SelectedTab = tab!;
     }
 
-    /// <summary>Adds a specific dimension row to the cart (per-row "ADD TO CART").</summary>
-    [RelayCommand]
-    private void AddDimensionToCart(DimensionOption? dimension)
+    // ==================== Cart ====================
+
+    public ObservableCollection<CartLine> Cart { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CartTotalLabel))]
+    [NotifyPropertyChangedFor(nameof(ChangeLabel))]
+    [NotifyCanExecuteChangedFor(nameof(CheckoutCommand))]
+    public partial double CartTotal { get; set; }
+
+    [ObservableProperty]
+    public partial string CartTabLabel { get; set; } = "Cart";
+
+    [ObservableProperty]
+    public partial bool IsCartEmpty { get; set; } = true;
+
+    public string CartTotalLabel => $"${CartTotal:0.00}";
+
+    public ObservableCollection<string> PaymentMethods { get; }
+
+    [ObservableProperty]
+    public partial string PaymentMethod { get; set; } = "Cash";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChangeLabel))]
+    public partial string AmountPaidText { get; set; } = string.Empty;
+
+    public string ChangeLabel
     {
-        if (dimension is null)
+        get
+        {
+            var paid = ParseDouble(AmountPaidText, CartTotal);
+            var change = paid - CartTotal;
+            return change < 0 ? $"Due ${-change:0.00}" : $"Change ${change:0.00}";
+        }
+    }
+
+    [RelayCommand]
+    private void AddProductToCart(Product? product)
+    {
+        if (product is null)
             return;
 
-        var existing = Cart.FirstOrDefault(c =>
-            c.Material == DetailMaterialName && c.Dimension == dimension.Dimension);
-
+        var existing = Cart.FirstOrDefault(c => c.ProductId == product.Id);
         if (existing is not null)
         {
             existing.Quantity++;
@@ -125,9 +223,12 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         {
             var line = new CartLine
             {
-                Material = DetailMaterialName,
-                Dimension = dimension.Dimension,
-                UnitPrice = dimension.Price,
+                ProductId = product.Id,
+                Material = string.IsNullOrWhiteSpace(product.Name) ? product.Category : product.Name,
+                Dimension = product.Dimension,
+                Unit = product.Unit,
+                AvailableStock = product.Stock,
+                UnitPrice = product.Price,
                 Quantity = 1,
             };
             line.PropertyChanged += (_, _) => RecalculateCart();
@@ -137,23 +238,23 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         RecalculateCart();
     }
 
-    /// <summary>Bottom "Add to Cart" button: adds the currently selected dimension.</summary>
     [RelayCommand]
     private void AddSelectedToCart()
     {
-        var dimension = SelectedDimension ?? Dimensions.FirstOrDefault();
-        if (dimension is null)
+        var product = SelectedProduct ?? CategoryProducts.FirstOrDefault();
+        if (product is null)
             return;
-
-        AddDimensionToCart(dimension);
+        AddProductToCart(product);
         SelectedTab = "Cart";
     }
 
     [RelayCommand]
     private void IncrementLine(CartLine? line)
     {
-        if (line is not null)
-            line.Quantity++;
+        if (line is null)
+            return;
+        line.Quantity++;
+        RecalculateCart();
     }
 
     [RelayCommand]
@@ -181,33 +282,62 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasCartItems))]
     private void Checkout()
     {
-        var count = Cart.Sum(c => c.Quantity);
+        if (Cart.Count == 0)
+            return;
+
+        var timestamp = DateTime.Now;
+        var lines = Cart.ToList();
         var total = CartTotal;
+
+        var sale = new Sale
+        {
+            Timestamp = timestamp,
+            TotalAmount = total,
+            PaymentMethod = PaymentMethod,
+            Items = lines.Select(l => new SaleItem
+            {
+                ProductId = l.ProductId,
+                Quantity = l.Quantity,
+                UnitPrice = l.UnitPrice,
+            }).ToList(),
+        };
+
+        long saleId = _db.RecordSale(sale);
+
+        var paid = ParseDouble(AmountPaidText, total);
+        try
+        {
+            _receipt.GenerateAndPrint(saleId, timestamp, lines, total, PaymentMethod, paid);
+        }
+        catch
+        {
+            // Receipt generation is best-effort and must not fail the sale.
+        }
+
+        var itemCount = lines.Sum(l => l.Quantity);
+
         Cart.Clear();
+        AmountPaidText = string.Empty;
         RecalculateCart();
+
+        // Refresh stock-derived views.
+        LoadCategories();
+        LoadStock();
+        LoadOrders();
+
+        // Refresh the open category modal, if any.
+        if (IsDetailOpen && !string.IsNullOrWhiteSpace(DetailCategory))
+        {
+            CategoryProducts.Clear();
+            foreach (var p in _db.GetProductsByCategory(DetailCategory))
+                CategoryProducts.Add(p);
+        }
+
         SelectedTab = "Selection";
         IsDetailOpen = false;
-        DetailSubtitle = $"Order placed: {count} item(s), {total:C}. (Backend pending.)";
+        ActiveSection = "Orders";
+        DetailSubtitle = $"Sale #{saleId:0000} complete: {itemCount} item(s), ${total:0.00}. Receipt printed.";
     }
-
-    [RelayCommand]
-    private void NewSale() => DetailSubtitle = "New sale started - pick a material category";
-
-    /// <summary>Dashboard right-panel "ADD TO CART" (no item selected yet).</summary>
-    [RelayCommand]
-    private void AddToCart() => DetailSubtitle = "Pick a material category first, then choose a dimension.";
-
-    [RelayCommand]
-    private void AddCustomCategory() => DetailSubtitle = "Add a custom category (coming soon)";
-
-    [RelayCommand]
-    private void OpenHistory() => DetailSubtitle = "Recent history (coming soon)";
-
-    [RelayCommand]
-    private void OpenShipments() => DetailSubtitle = "Incoming shipments (coming soon)";
-
-    [RelayCommand]
-    private void OpenDocument(string? name) => DetailSubtitle = $"Opening {name} (coming soon)";
 
     private void RecalculateCart()
     {
@@ -215,46 +345,205 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         var count = Cart.Sum(c => c.Quantity);
         CartTabLabel = count > 0 ? $"Cart ({count})" : "Cart";
         IsCartEmpty = Cart.Count == 0;
+        OnPropertyChanged(nameof(ChangeLabel));
         CheckoutCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Sample per-category dimension catalog. Replace with DB queries later.</summary>
-    private static (string subtitle, string docLabel, DimensionOption[] dims) BuildCatalog(string category) =>
-        category switch
+    // ==================== Stock management (CRUD) ====================
+
+    public ObservableCollection<Product> StockItems { get; } = new();
+    public ObservableCollection<string> Units { get; }
+
+    [ObservableProperty]
+    public partial string StockStatus { get; set; } = "Ready.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditing))]
+    [NotifyPropertyChangedFor(nameof(FormTitle))]
+    [NotifyPropertyChangedFor(nameof(SaveButtonLabel))]
+    public partial long EditingProductId { get; set; }
+
+    public bool IsEditing => EditingProductId != 0;
+    public string FormTitle => IsEditing ? "Edit Item" : "Add New Item";
+    public string SaveButtonLabel => IsEditing ? "Update Item" : "Add Item";
+
+    [ObservableProperty] public partial string FormCategory { get; set; } = string.Empty;
+    [ObservableProperty] public partial string FormName { get; set; } = string.Empty;
+    [ObservableProperty] public partial string FormDimension { get; set; } = string.Empty;
+    [ObservableProperty] public partial string FormUnit { get; set; } = "ea";
+    [ObservableProperty] public partial string FormSku { get; set; } = string.Empty;
+    [ObservableProperty] public partial string FormPriceText { get; set; } = string.Empty;
+    [ObservableProperty] public partial string FormStockText { get; set; } = string.Empty;
+
+    private void LoadStock()
+    {
+        StockItems.Clear();
+        foreach (var p in _db.SearchProducts(SearchText))
+            StockItems.Add(p);
+    }
+
+    [RelayCommand]
+    private void NewProduct()
+    {
+        EditingProductId = 0;
+        FormCategory = string.Empty;
+        FormName = string.Empty;
+        FormDimension = string.Empty;
+        FormUnit = "ea";
+        FormSku = string.Empty;
+        FormPriceText = string.Empty;
+        FormStockText = string.Empty;
+        StockStatus = "Enter details for a new metal object.";
+    }
+
+    [RelayCommand]
+    private void EditProductRow(Product? product)
+    {
+        if (product is null)
+            return;
+        EditingProductId = product.Id;
+        FormCategory = product.Category;
+        FormName = product.Name;
+        FormDimension = product.Dimension;
+        FormUnit = string.IsNullOrWhiteSpace(product.Unit) ? "ea" : product.Unit;
+        FormSku = product.Barcode;
+        FormPriceText = product.Price.ToString("0.00", CultureInfo.CurrentCulture);
+        FormStockText = product.Stock.ToString(CultureInfo.CurrentCulture);
+        StockStatus = $"Editing \"{product.Name} {product.Dimension}\".";
+    }
+
+    [RelayCommand]
+    private void SaveProduct()
+    {
+        if (string.IsNullOrWhiteSpace(FormCategory))
         {
-            "Steel" => ("Alloy Steel Grade A36", "A36 Material Safety Data Sheet (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "2\" x 4\"",  Stock = 48, Price = 124.50 },
-                new DimensionOption { Dimension = "4\" x 8\"",  Stock = 12, Price = 286.00 },
-                new DimensionOption { Dimension = "12\" x 24\"", Stock = 5,  Price = 890.25 },
-            }),
-            "Iron" => ("Cast Iron Grade 65-45-12", "Cast Iron Data Sheet (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "1\" Pipe (per ft)",   Stock = 120, Price = 18.75 },
-                new DimensionOption { Dimension = "2\" Pipe (per ft)",   Stock = 64,  Price = 32.40 },
-                new DimensionOption { Dimension = "Ornamental Casting",  Stock = 9,   Price = 145.00 },
-            }),
-            "Roofing" => ("Galvanized Corrugated G90", "G90 Coating Data Sheet (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "26ga Sheet 3' x 8'",  Stock = 210, Price = 42.90 },
-                new DimensionOption { Dimension = "Zinc Sheet 4' x 10'", Stock = 3,   Price = 96.50 },
-                new DimensionOption { Dimension = "Ridge Cap (per ft)",  Stock = 88,  Price = 7.25 },
-            }),
-            "Tools" => ("Industrial Power Tools", "Tool Warranty & Safety (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "Angle Grinder 4.5\"", Stock = 34, Price = 79.99 },
-                new DimensionOption { Dimension = "MIG Welder 180A",     Stock = 6,  Price = 549.00 },
-                new DimensionOption { Dimension = "Plasma Cutter 40A",   Stock = 4,  Price = 720.00 },
-            }),
-            "Hardware" => ("Fasteners & Fittings", "Fastener Spec Sheet (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "1/2\" Hex Bolt (box)",  Stock = 500, Price = 24.00 },
-                new DimensionOption { Dimension = "3/8\" Anchor (box)",    Stock = 320, Price = 31.50 },
-                new DimensionOption { Dimension = "Heavy Hinge (pair)",    Stock = 76,  Price = 18.90 },
-            }),
-            _ => ($"{category} - General Stock", "Material Data Sheet (PDF)", new[]
-            {
-                new DimensionOption { Dimension = "Standard", Stock = 25, Price = 49.99 },
-            }),
+            StockStatus = "Category is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(FormName))
+        {
+            StockStatus = "Material name is required.";
+            return;
+        }
+        if (!TryParseDouble(FormPriceText, out var price) || price < 0)
+        {
+            StockStatus = "Enter a valid, non-negative price.";
+            return;
+        }
+        if (!TryParseInt(FormStockText, out var stock) || stock < 0)
+        {
+            StockStatus = "Enter a valid, non-negative stock quantity.";
+            return;
+        }
+
+        var product = new Product
+        {
+            Id = EditingProductId,
+            Category = FormCategory.Trim(),
+            Name = FormName.Trim(),
+            Dimension = FormDimension.Trim(),
+            Unit = string.IsNullOrWhiteSpace(FormUnit) ? "ea" : FormUnit.Trim(),
+            Barcode = FormSku.Trim(),
+            Price = price,
+            Stock = stock,
         };
+
+        if (EditingProductId == 0)
+        {
+            var id = _db.AddProduct(product);
+            StockStatus = $"Added \"{product.Name} {product.Dimension}\" (#{id}).";
+        }
+        else
+        {
+            _db.UpdateProduct(product);
+            StockStatus = $"Updated \"{product.Name} {product.Dimension}\".";
+        }
+
+        NewProduct();
+        LoadStock();
+        LoadCategories();
+    }
+
+    [RelayCommand]
+    private void DeleteProductRow(Product? product)
+    {
+        if (product is null)
+            return;
+        _db.DeleteProduct(product.Id);
+        if (EditingProductId == product.Id)
+            NewProduct();
+        StockStatus = $"Deleted \"{product.Name} {product.Dimension}\".";
+        LoadStock();
+        LoadCategories();
+    }
+
+    /// <summary>Sidebar "Add Custom Category": jump to Stock with a blank form.</summary>
+    [RelayCommand]
+    private void AddCustomCategory()
+    {
+        ActiveSection = "Stock";
+        NewProduct();
+        StockStatus = "Create a custom metal object: set a new category name and details.";
+    }
+
+    // ==================== Orders / history ====================
+
+    public ObservableCollection<Sale> RecentSales { get; } = new();
+
+    [ObservableProperty]
+    public partial string OrdersSummary { get; set; } = "No sales yet.";
+
+    private void LoadOrders()
+    {
+        RecentSales.Clear();
+        var sales = _db.GetRecentSales();
+        foreach (var s in sales)
+            RecentSales.Add(s);
+
+        var total = sales.Sum(s => s.TotalAmount);
+        OrdersSummary = sales.Count == 0
+            ? "No sales yet."
+            : $"{sales.Count} sale(s) · ${total:0.00} total revenue";
+    }
+
+    // ==================== Misc commands ====================
+
+    [RelayCommand]
+    private void NewSale()
+    {
+        Cart.Clear();
+        AmountPaidText = string.Empty;
+        RecalculateCart();
+        ActiveSection = "Inventory";
+        DetailSubtitle = "New sale started - pick a material category.";
+    }
+
+    [RelayCommand]
+    private void AddToCart() => DetailSubtitle = "Pick a material category first, then choose a dimension.";
+
+    [RelayCommand]
+    private void OpenHistory()
+    {
+        ActiveSection = "Orders";
+        LoadOrders();
+    }
+
+    [RelayCommand]
+    private void OpenShipments() => DetailSubtitle = "Incoming shipments (coming soon)";
+
+    [RelayCommand]
+    private void OpenDocument(string? name) => DetailSubtitle = $"Opening {name} (coming soon)";
+
+    // ==================== Parsing helpers ====================
+
+    private static bool TryParseDouble(string? text, out double value) =>
+        double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value) ||
+        double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+
+    private static bool TryParseInt(string? text, out int value) =>
+        int.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value) ||
+        int.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+
+    private static double ParseDouble(string? text, double fallback) =>
+        TryParseDouble(text, out var value) ? value : fallback;
 }

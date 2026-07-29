@@ -25,7 +25,7 @@ public partial class App : Application
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MaterialSelectionViewModel(),
+                DataContext = new MaterialSelectionViewModel(database),
             };
         }
 

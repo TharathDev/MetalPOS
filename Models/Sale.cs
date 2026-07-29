@@ -13,6 +13,15 @@ public class Sale
     public double TotalAmount { get; set; }
     public string PaymentMethod { get; set; } = "Cash";
     public List<SaleItem> Items { get; set; } = new();
+
+    /// <summary>Total number of units sold (populated by history queries).</summary>
+    public int ItemCount { get; set; }
+
+    // ----- Display helpers for the Orders / history view -----
+    public string SaleNumber => $"#{Id:0000}";
+    public string TimestampDisplay => Timestamp.ToString("MMM d, yyyy  h:mm tt");
+    public string TotalDisplay => $"${TotalAmount:0.00}";
+    public string ItemCountDisplay => ItemCount == 1 ? "1 item" : $"{ItemCount} items";
 }
 
 /// <summary>

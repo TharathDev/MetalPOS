@@ -7,8 +7,9 @@ using PosApp.Models;
 namespace PosApp.Services;
 
 /// <summary>
-/// Owns the local SQLite database (pos_data.db). Responsible for creating the
-/// schema on first run, seeding sample products, and all read/write access.
+/// Owns the local SQLite database (metals_pos.db). Responsible for creating the
+/// schema on first run, seeding sample metal products, and all read/write access
+/// including full inventory CRUD and sale recording.
 /// </summary>
 public class DatabaseService
 {
@@ -17,7 +18,7 @@ public class DatabaseService
     public DatabaseService()
     {
         // Store the DB next to the running executable so it is self-contained.
-        var dbPath = Path.Combine(AppContext.BaseDirectory, "pos_data.db");
+        var dbPath = Path.Combine(AppContext.BaseDirectory, "metals_pos.db");
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = dbPath
@@ -25,13 +26,12 @@ public class DatabaseService
     }
 
     /// <summary>Full path to the SQLite file, useful for logging/diagnostics.</summary>
-    public string DatabasePath => AppContext.BaseDirectory + "pos_data.db";
+    public string DatabasePath => Path.Combine(AppContext.BaseDirectory, "metals_pos.db");
 
     private SqliteConnection OpenConnection()
     {
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
-        // Enforce foreign keys for referential integrity between sales and items.
         using var pragma = connection.CreateCommand();
         pragma.CommandText = "PRAGMA foreign_keys = ON;";
         pragma.ExecuteNonQuery();
@@ -48,11 +48,14 @@ public class DatabaseService
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS Products (
-                Id      INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name    TEXT    NOT NULL,
-                Barcode TEXT,
-                Price   REAL    NOT NULL DEFAULT 0,
-                Stock   INTEGER NOT NULL DEFAULT 0
+                Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                Category  TEXT    NOT NULL DEFAULT '',
+                Name      TEXT    NOT NULL,
+                Dimension TEXT    NOT NULL DEFAULT '',
+                Unit      TEXT    NOT NULL DEFAULT 'ea',
+                Barcode   TEXT,
+                Price     REAL    NOT NULL DEFAULT 0,
+                Stock     INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS Sales (
@@ -86,13 +89,23 @@ public class DatabaseService
                 return;
         }
 
-        var samples = new (string Name, string Barcode, double Price, int Stock)[]
+        var samples = new (string Category, string Name, string Dimension, string Unit, string Sku, double Price, int Stock)[]
         {
-            ("Espresso",        "1000000000017", 2.50,  100),
-            ("Cappuccino",      "1000000000024", 3.25,  80),
-            ("Blueberry Muffin","1000000000031", 2.75,  40),
-            ("Bottled Water",   "1000000000048", 1.50,  200),
-            ("Chocolate Bar",   "1000000000055", 1.95,  120),
+            ("Steel", "Alloy Steel Grade A36", "2\" x 4\"",   "sheet", "STL-A36-24",  124.50, 48),
+            ("Steel", "Alloy Steel Grade A36", "4\" x 8\"",   "sheet", "STL-A36-48",  286.00, 12),
+            ("Steel", "Alloy Steel Grade A36", "12\" x 24\"", "sheet", "STL-A36-1224",890.25, 5),
+            ("Iron",  "Cast Iron Grade 65-45-12", "1\" Pipe (per ft)", "ft",   "IRN-P1",  18.75, 120),
+            ("Iron",  "Cast Iron Grade 65-45-12", "2\" Pipe (per ft)", "ft",   "IRN-P2",  32.40, 64),
+            ("Iron",  "Cast Iron Grade 65-45-12", "Ornamental Casting","ea",   "IRN-ORN", 145.00, 9),
+            ("Roofing", "Galvanized Corrugated G90", "26ga Sheet 3' x 8'",  "sheet", "ROF-26", 42.90, 210),
+            ("Roofing", "Galvanized Corrugated G90", "Zinc Sheet 4' x 10'", "sheet", "ROF-ZN", 96.50, 3),
+            ("Roofing", "Galvanized Corrugated G90", "Ridge Cap (per ft)",  "ft",    "ROF-RC", 7.25, 88),
+            ("Tools", "Industrial Power Tools", "Angle Grinder 4.5\"", "ea", "TL-AG45", 79.99, 34),
+            ("Tools", "Industrial Power Tools", "MIG Welder 180A",     "ea", "TL-MIG",  549.00, 6),
+            ("Tools", "Industrial Power Tools", "Plasma Cutter 40A",   "ea", "TL-PLZ",  720.00, 4),
+            ("Hardware", "Fasteners & Fittings", "1/2\" Hex Bolt (box)", "box",  "HW-HB", 24.00, 500),
+            ("Hardware", "Fasteners & Fittings", "3/8\" Anchor (box)",   "box",  "HW-AN", 31.50, 320),
+            ("Hardware", "Fasteners & Fittings", "Heavy Hinge (pair)",   "pair", "HW-HG", 18.90, 76),
         };
 
         using var transaction = connection.BeginTransaction();
@@ -100,10 +113,14 @@ public class DatabaseService
         {
             using var insert = connection.CreateCommand();
             insert.Transaction = transaction;
-            insert.CommandText =
-                "INSERT INTO Products (Name, Barcode, Price, Stock) VALUES ($name, $barcode, $price, $stock);";
+            insert.CommandText = @"
+                INSERT INTO Products (Category, Name, Dimension, Unit, Barcode, Price, Stock)
+                VALUES ($cat, $name, $dim, $unit, $sku, $price, $stock);";
+            insert.Parameters.AddWithValue("$cat", s.Category);
             insert.Parameters.AddWithValue("$name", s.Name);
-            insert.Parameters.AddWithValue("$barcode", s.Barcode);
+            insert.Parameters.AddWithValue("$dim", s.Dimension);
+            insert.Parameters.AddWithValue("$unit", s.Unit);
+            insert.Parameters.AddWithValue("$sku", s.Sku);
             insert.Parameters.AddWithValue("$price", s.Price);
             insert.Parameters.AddWithValue("$stock", s.Stock);
             insert.ExecuteNonQuery();
@@ -111,9 +128,51 @@ public class DatabaseService
         transaction.Commit();
     }
 
+    // ==================== Inventory reads ====================
+
     /// <summary>
-    /// Returns products matching the search term against name or barcode.
-    /// An empty search term returns all products ordered by name.
+    /// Returns categories with SKU counts and total stock, for the dashboard cards.
+    /// </summary>
+    public List<CategoryInfo> GetCategories()
+    {
+        var results = new List<CategoryInfo>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT Category, COUNT(*) AS Skus, COALESCE(SUM(Stock), 0) AS TotalStock
+            FROM Products
+            WHERE Category <> ''
+            GROUP BY Category
+            ORDER BY Category;";
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var name = reader.GetString(0);
+            results.Add(new CategoryInfo
+            {
+                Name = name,
+                Description = DescribeCategory(name),
+                SkuCount = reader.GetInt32(1),
+                TotalStock = reader.GetInt32(2),
+            });
+        }
+        return results;
+    }
+
+    private static string DescribeCategory(string name) => name switch
+    {
+        "Steel" => "H-Beams, Rebar, Sheets, and Structural Steel Components.",
+        "Iron" => "Cast Iron Pipes, Ornaments, and Raw Industrial Castings.",
+        "Roofing" => "Corrugated Sheets, Shingles, Gutters, and Flashing.",
+        "Tools" => "Industrial Cutting, Welding Equipment, and Power Tools.",
+        "Hardware" => "Fasteners, Bolts, Hinges, and Small Metal Components.",
+        _ => "Custom metal stock and specialty components.",
+    };
+
+    /// <summary>
+    /// Returns products matching the search term against category, name, dimension
+    /// or SKU. An empty search term returns all products ordered by category/name.
     /// </summary>
     public List<Product> SearchProducts(string? searchTerm)
     {
@@ -123,15 +182,16 @@ public class DatabaseService
 
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            cmd.CommandText = "SELECT Id, Name, Barcode, Price, Stock FROM Products ORDER BY Name;";
+            cmd.CommandText =
+                "SELECT Id, Category, Name, Dimension, Unit, Barcode, Price, Stock FROM Products ORDER BY Category, Name, Dimension;";
         }
         else
         {
             cmd.CommandText = @"
-                SELECT Id, Name, Barcode, Price, Stock
+                SELECT Id, Category, Name, Dimension, Unit, Barcode, Price, Stock
                 FROM Products
-                WHERE Name LIKE $term OR Barcode LIKE $term
-                ORDER BY Name;";
+                WHERE Category LIKE $term OR Name LIKE $term OR Dimension LIKE $term OR Barcode LIKE $term
+                ORDER BY Category, Name, Dimension;";
             cmd.Parameters.AddWithValue("$term", "%" + searchTerm.Trim() + "%");
         }
 
@@ -142,18 +202,103 @@ public class DatabaseService
         return results;
     }
 
-    /// <summary>Finds a single product by exact barcode match, or null if none.</summary>
+    /// <summary>Returns all products in a given category, ordered by name/dimension.</summary>
+    public List<Product> GetProductsByCategory(string category)
+    {
+        var results = new List<Product>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT Id, Category, Name, Dimension, Unit, Barcode, Price, Stock
+            FROM Products
+            WHERE Category = $cat
+            ORDER BY Name, Dimension;";
+        cmd.Parameters.AddWithValue("$cat", category);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            results.Add(ReadProduct(reader));
+
+        return results;
+    }
+
+    public Product? GetProductById(long id)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            "SELECT Id, Category, Name, Dimension, Unit, Barcode, Price, Stock FROM Products WHERE Id = $id LIMIT 1;";
+        cmd.Parameters.AddWithValue("$id", id);
+
+        using var reader = cmd.ExecuteReader();
+        return reader.Read() ? ReadProduct(reader) : null;
+    }
+
+    /// <summary>Finds a single product by exact barcode/SKU match, or null if none.</summary>
     public Product? GetProductByBarcode(string barcode)
     {
         using var connection = OpenConnection();
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
-            "SELECT Id, Name, Barcode, Price, Stock FROM Products WHERE Barcode = $barcode LIMIT 1;";
+            "SELECT Id, Category, Name, Dimension, Unit, Barcode, Price, Stock FROM Products WHERE Barcode = $barcode LIMIT 1;";
         cmd.Parameters.AddWithValue("$barcode", barcode.Trim());
 
         using var reader = cmd.ExecuteReader();
         return reader.Read() ? ReadProduct(reader) : null;
     }
+
+    // ==================== Inventory writes (CRUD) ====================
+
+    /// <summary>Inserts a new product and returns its new Id.</summary>
+    public long AddProduct(Product product)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO Products (Category, Name, Dimension, Unit, Barcode, Price, Stock)
+            VALUES ($cat, $name, $dim, $unit, $sku, $price, $stock);
+            SELECT last_insert_rowid();";
+        BindProduct(cmd, product);
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    /// <summary>Updates an existing product identified by <see cref="Product.Id"/>.</summary>
+    public void UpdateProduct(Product product)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE Products
+            SET Category = $cat, Name = $name, Dimension = $dim, Unit = $unit,
+                Barcode = $sku, Price = $price, Stock = $stock
+            WHERE Id = $id;";
+        BindProduct(cmd, product);
+        cmd.Parameters.AddWithValue("$id", product.Id);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Deletes a product by Id.</summary>
+    public void DeleteProduct(long id)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM Products WHERE Id = $id;";
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    private static void BindProduct(SqliteCommand cmd, Product product)
+    {
+        cmd.Parameters.AddWithValue("$cat", product.Category ?? string.Empty);
+        cmd.Parameters.AddWithValue("$name", product.Name ?? string.Empty);
+        cmd.Parameters.AddWithValue("$dim", product.Dimension ?? string.Empty);
+        cmd.Parameters.AddWithValue("$unit", string.IsNullOrWhiteSpace(product.Unit) ? "ea" : product.Unit);
+        cmd.Parameters.AddWithValue("$sku", (object?)product.Barcode ?? string.Empty);
+        cmd.Parameters.AddWithValue("$price", product.Price);
+        cmd.Parameters.AddWithValue("$stock", product.Stock);
+    }
+
+    // ==================== Sales ====================
 
     /// <summary>
     /// Persists a sale and its items in a single transaction and decrements
@@ -196,7 +341,6 @@ public class DatabaseService
             using (var stockCmd = connection.CreateCommand())
             {
                 stockCmd.Transaction = transaction;
-                // Guard against negative stock at the SQL level.
                 stockCmd.CommandText = @"
                     UPDATE Products
                     SET Stock = MAX(0, Stock - $qty)
@@ -211,12 +355,46 @@ public class DatabaseService
         return saleId;
     }
 
+    /// <summary>Returns the most recent sales for the Orders view.</summary>
+    public List<Sale> GetRecentSales(int limit = 50)
+    {
+        var results = new List<Sale>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT s.Id, s.Timestamp, s.TotalAmount, s.PaymentMethod,
+                   COALESCE(SUM(si.Quantity), 0) AS ItemCount
+            FROM Sales s
+            LEFT JOIN SaleItems si ON si.SaleId = s.Id
+            GROUP BY s.Id
+            ORDER BY s.Timestamp DESC
+            LIMIT $limit;";
+        cmd.Parameters.AddWithValue("$limit", limit);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            results.Add(new Sale
+            {
+                Id = reader.GetInt64(0),
+                Timestamp = reader.GetDateTime(1),
+                TotalAmount = reader.GetDouble(2),
+                PaymentMethod = reader.GetString(3),
+                ItemCount = reader.GetInt32(4),
+            });
+        }
+        return results;
+    }
+
     private static Product ReadProduct(SqliteDataReader reader) => new()
     {
         Id = reader.GetInt64(0),
-        Name = reader.GetString(1),
-        Barcode = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-        Price = reader.GetDouble(3),
-        Stock = reader.GetInt32(4),
+        Category = reader.GetString(1),
+        Name = reader.GetString(2),
+        Dimension = reader.GetString(3),
+        Unit = reader.GetString(4),
+        Barcode = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+        Price = reader.GetDouble(6),
+        Stock = reader.GetInt32(7),
     };
 }
