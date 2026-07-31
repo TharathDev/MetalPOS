@@ -84,6 +84,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsInventorySection))]
     [NotifyPropertyChangedFor(nameof(IsStockSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
+    [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
     [NotifyPropertyChangedFor(nameof(SectionTitle))]
     [NotifyPropertyChangedFor(nameof(SectionSubtitle))]
     public partial string ActiveSection { get; set; } = "Inventory";
@@ -91,6 +92,35 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsInventorySection => ActiveSection == "Inventory";
     public bool IsStockSection => ActiveSection == "Stock";
     public bool IsOrdersSection => ActiveSection is "Orders" or "Reports";
+
+    [ObservableProperty]
+    public partial int CategoryColumns { get; set; } = 3;
+
+    [ObservableProperty]
+    public partial double CategoryCardWidth { get; set; } = 240;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
+    public partial bool IsWideLayout { get; set; }
+
+    /// <summary>The technical sidebar is useful only on a wide Inventory layout.</summary>
+    public bool IsTechnicalPanelVisible => IsInventorySection && IsWideLayout;
+
+    /// <summary>Called by the window when its width changes.</summary>
+    public void UpdateResponsiveLayout(double width)
+    {
+        IsWideLayout = width >= 1440;
+        CategoryColumns = IsWideLayout ? 4 : 3;
+
+        // 224 sidebar + optional 300 specs + 40 effective content inset.
+        // Subtract the 16px per-card margin after dividing into equal cells.
+        var specsWidth = IsWideLayout ? 300d : 0d;
+        var gridWidth = Math.Max(720d, width - 224d - specsWidth - 40d);
+        CategoryCardWidth = Math.Floor(gridWidth / CategoryColumns) - 16d;
+
+        foreach (var category in Categories)
+            category.CardWidth = CategoryCardWidth;
+    }
 
     public string SectionTitle => ActiveSection switch
     {
@@ -128,7 +158,20 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         Categories.Clear();
         foreach (var c in _db.GetCategories())
+        {
+            c.CardWidth = CategoryCardWidth;
             Categories.Add(c);
+        }
+
+        // Keep the custom-object action inside the same responsive grid so every
+        // tile aligns to the same columns and row height.
+        Categories.Add(new CategoryInfo
+        {
+            Name = "Add Custom Object",
+            Description = "Create a new category, material, dimension, and stock item.",
+            IsCustom = true,
+            CardWidth = CategoryCardWidth,
+        });
     }
 
     [RelayCommand]
@@ -183,7 +226,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         CategoryProducts.Clear();
         foreach (var p in _db.GetProductsByCategory(categoryName!))
+        {
+            p.CartQuantity = Cart.FirstOrDefault(line => line.ProductId == p.Id)?.Quantity ?? 0;
             CategoryProducts.Add(p);
+        }
 
         var materials = CategoryProducts.Select(p => p.Name).Distinct().ToList();
         DetailMaterialName = materials.Count switch
@@ -248,13 +294,16 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [RelayCommand]
     private void AddProductToCart(Product? product)
     {
-        if (product is null)
+        if (product is null || product.Stock <= 0)
             return;
 
         var existing = Cart.FirstOrDefault(c => c.ProductId == product.Id);
         if (existing is not null)
         {
+            if (existing.Quantity >= existing.AvailableStock)
+                return;
             existing.Quantity++;
+            SyncProductCartQuantity(product.Id, existing.Quantity);
         }
         else
         {
@@ -268,11 +317,36 @@ public partial class MaterialSelectionViewModel : ViewModelBase
                 UnitPrice = product.Price,
                 Quantity = 1,
             };
-            line.PropertyChanged += (_, _) => RecalculateCart();
+            line.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(CartLine.Quantity))
+                    SyncProductCartQuantity(line.ProductId, Math.Max(0, line.Quantity));
+                RecalculateCart();
+            };
             Cart.Add(line);
+            SyncProductCartQuantity(product.Id, 1);
         }
 
         RecalculateCart();
+    }
+
+    [RelayCommand]
+    private void IncrementProductQuantity(Product? product) => AddProductToCart(product);
+
+    [RelayCommand]
+    private void DecrementProductQuantity(Product? product)
+    {
+        if (product is null)
+            return;
+
+        var line = Cart.FirstOrDefault(c => c.ProductId == product.Id);
+        if (line is null)
+        {
+            SyncProductCartQuantity(product.Id, 0);
+            return;
+        }
+
+        DecrementLine(line);
     }
 
     [RelayCommand]
@@ -288,9 +362,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [RelayCommand]
     private void IncrementLine(CartLine? line)
     {
-        if (line is null)
+        if (line is null || line.Quantity >= line.AvailableStock)
             return;
         line.Quantity++;
+        SyncProductCartQuantity(line.ProductId, line.Quantity);
         RecalculateCart();
     }
 
@@ -301,7 +376,14 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             return;
         line.Quantity--;
         if (line.Quantity <= 0)
+        {
             Cart.Remove(line);
+            SyncProductCartQuantity(line.ProductId, 0);
+        }
+        else
+        {
+            SyncProductCartQuantity(line.ProductId, line.Quantity);
+        }
         RecalculateCart();
     }
 
@@ -311,7 +393,15 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (line is null)
             return;
         Cart.Remove(line);
+        SyncProductCartQuantity(line.ProductId, 0);
         RecalculateCart();
+    }
+
+    private void SyncProductCartQuantity(long productId, int quantity)
+    {
+        var product = CategoryProducts.FirstOrDefault(p => p.Id == productId);
+        if (product is not null)
+            product.CartQuantity = Math.Max(0, quantity);
     }
 
     private bool HasCartItems() => Cart.Count > 0;
@@ -353,6 +443,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         var itemCount = lines.Sum(l => l.Quantity);
 
+        foreach (var product in CategoryProducts)
+            product.CartQuantity = 0;
         Cart.Clear();
         AmountPaidText = string.Empty;
         RecalculateCart();
@@ -573,6 +665,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [RelayCommand]
     private void NewSale()
     {
+        foreach (var product in CategoryProducts)
+            product.CartQuantity = 0;
         Cart.Clear();
         AmountPaidText = string.Empty;
         RecalculateCart();

@@ -234,6 +234,28 @@
             <Setter Property="Background" Value="{StaticResource AccentDark}" />
         </Style>
 
+        <!-- Compact quantity stepper shown once a row is in the cart. Kept visually
+             light (outlined, not a solid block) so it doesn't outweigh the row text. -->
+        <Style Selector="Button.qtyStep">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.qtyStep:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource PeachTile}" />
+        </Style>
+        <Style Selector="Button.qtyStep:disabled">
+            <Setter Property="Foreground" Value="{StaticResource TextFaint}" />
+        </Style>
+
         <!-- Dimension ListBox: strip default selection chrome so our row Border shows through -->
         <Style Selector="ListBox.dims">
             <Setter Property="Background" Value="Transparent" />
@@ -433,8 +455,8 @@
                 </Grid>
             </Border>
 
-            <!-- Content: main + right specs panel -->
-            <Grid ColumnDefinitions="*,300">
+            <!-- Content: main + optional wide-screen specs panel -->
+            <Grid ColumnDefinitions="*,Auto">
 
                 <!-- Main content -->
                 <ScrollViewer Grid.Column="0" Padding="28,24" HorizontalScrollBarVisibility="Disabled">
@@ -472,73 +494,112 @@
 
                         <!-- ============ INVENTORY SECTION ============ -->
                         <StackPanel IsVisible="{Binding IsInventorySection}" Margin="0,24,0,0">
-                            <ItemsControl ItemsSource="{Binding Categories}">
-                                <ItemsControl.ItemsPanel>
+                            <ListBox ItemsSource="{Binding Categories}" Margin="-8,-8,-8,0"
+                                     VerticalAlignment="Top" Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <!-- ListBoxItem is a concrete container, allowing every generated
+                                     tile to fill its equal-width UniformGrid cell exactly. -->
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="0" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalAlignment" Value="Top" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalContentAlignment" Value="Top" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                        <Setter Property="Background" Value="Transparent" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                        <Setter Property="Background" Value="Transparent" />
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <UniformGrid Columns="3" />
+                                        <UniformGrid Columns="{Binding CategoryColumns}"
+                                                     Rows="0" VerticalAlignment="Top" />
                                     </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:CategoryInfo">
-                                        <Button Classes="categoryCard" Margin="0,0,16,16"
-                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).SelectCategoryCommand}"
-                                                CommandParameter="{Binding Name}">
-                                            <Grid RowDefinitions="Auto,*,Auto">
-                                                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                                                    <Border Width="52" Height="52" CornerRadius="12"
-                                                            Background="{StaticResource PeachTile}">
-                                                        <Path Classes="icon" Width="24" Height="24"
-                                                              Stroke="{StaticResource Accent}"
-                                                              Data="M12 3 L20 7 L12 11 L4 7 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17" />
-                                                    </Border>
-                                                    <Border Grid.Column="2" VerticalAlignment="Top"
-                                                            Background="{StaticResource ChipBg}"
-                                                            CornerRadius="6" Padding="8,4">
-                                                        <TextBlock Classes="mono" Text="{Binding SkuLabel}" FontSize="11"
-                                                                   Foreground="{StaticResource TextMuted}" />
+                                        <Grid>
+                                            <!-- Standard category tile -->
+                                            <Button Classes="categoryCard" Margin="8" Height="200"
+                                                    Width="{Binding CardWidth}"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                    IsVisible="{Binding !IsCustom}"
+                                                    Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).SelectCategoryCommand}"
+                                                    CommandParameter="{Binding Name}">
+                                                <Grid RowDefinitions="Auto,*,Auto">
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                                        <Border Width="52" Height="52" CornerRadius="12"
+                                                                Background="{StaticResource PeachTile}">
+                                                            <Path Classes="icon" Width="24" Height="24"
+                                                                  Stroke="{StaticResource Accent}"
+                                                                  Data="M12 3 L20 7 L12 11 L4 7 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17" />
+                                                        </Border>
+                                                        <Border Grid.Column="2" VerticalAlignment="Top"
+                                                                Background="{StaticResource ChipBg}"
+                                                                CornerRadius="6" Padding="8,4">
+                                                            <TextBlock Classes="mono" Text="{Binding SkuLabel}" FontSize="11"
+                                                                       Foreground="{StaticResource TextMuted}" />
+                                                        </Border>
+                                                    </Grid>
+                                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
+                                                        <TextBlock Classes="cardTitle" Text="{Binding Name}" />
+                                                        <TextBlock Text="{Binding Description}" FontSize="13"
+                                                                   Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}"
+                                                            BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,14,0,0">
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <Path Classes="icon" Width="15" Height="15"
+                                                                  Data="M4 12 H10 V20 H4 Z M14 4 H20 V20 H14 Z" />
+                                                            <TextBlock Text="{Binding StockLine}" FontSize="12"
+                                                                       Foreground="{StaticResource TextMuted}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
                                                     </Border>
                                                 </Grid>
-                                                <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
-                                                    <TextBlock Classes="cardTitle" Text="{Binding Name}" />
-                                                    <TextBlock Text="{Binding Description}" FontSize="13"
-                                                               Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                                <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}"
-                                                        BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,14,0,0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Path Classes="icon" Width="15" Height="15"
-                                                              Data="M4 12 H10 V20 H4 Z M14 4 H20 V20 H14 Z" />
-                                                        <TextBlock Text="{Binding StockLine}" FontSize="12"
-                                                                   Foreground="{StaticResource TextMuted}"
-                                                                   VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                            </Button>
 
-                            <!-- Add custom category / object -->
-                            <Button Classes="categoryCard" Background="Transparent" BorderThickness="0" Padding="0"
-                                    Height="120" HorizontalAlignment="Stretch"
-                                    Command="{Binding AddCustomCategoryCommand}">
-                                <Grid>
-                                    <Rectangle RadiusX="12" RadiusY="12" Fill="#F4F4F5" Stroke="#D1D5DB"
-                                               StrokeThickness="1.5" StrokeDashArray="4,3" />
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                                                HorizontalAlignment="Center" Spacing="12">
-                                        <Border Width="44" Height="44" CornerRadius="12" Background="White"
-                                                BorderBrush="{StaticResource HairLine}" BorderThickness="1">
-                                            <Path Classes="icon" Width="20" Height="20" Stroke="{StaticResource TextMuted}"
-                                                  Data="M12 5 V19 M5 12 H19" />
-                                        </Border>
-                                        <TextBlock Text="Add Custom Category / Metal Object" FontSize="14"
-                                                   FontWeight="SemiBold" Foreground="{StaticResource TextMuted}"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Grid>
-                            </Button>
+                                            <!-- Custom object action occupies a normal grid cell. -->
+                                            <Button Classes="categoryCard" Margin="8" Height="200"
+                                                    Width="{Binding CardWidth}"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                    IsVisible="{Binding IsCustom}"
+                                                    Background="Transparent" BorderThickness="0" Padding="0"
+                                                    Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).AddCustomCategoryCommand}">
+                                                <Grid>
+                                                    <Rectangle RadiusX="12" RadiusY="12" Fill="#F8F8F9"
+                                                               Stroke="#D1D5DB" StrokeThickness="1.5"
+                                                               StrokeDashArray="4,3" />
+                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                                Spacing="12" Margin="20">
+                                                        <Border Width="48" Height="48" CornerRadius="12" Background="White"
+                                                                BorderBrush="{StaticResource HairLine}" BorderThickness="1">
+                                                            <Path Classes="icon" Width="20" Height="20"
+                                                                  Stroke="{StaticResource TextMuted}"
+                                                                  Data="M12 5 V19 M5 12 H19" />
+                                                        </Border>
+                                                        <TextBlock Text="Add Custom Object" FontSize="14"
+                                                                   FontWeight="SemiBold" TextAlignment="Center"
+                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock Text="{Binding Description}" FontSize="12"
+                                                                   TextAlignment="Center" TextWrapping="Wrap"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </StackPanel>
 
                         <!-- ============ STOCK MANAGEMENT SECTION ============ -->
@@ -673,8 +734,10 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- Right specs panel -->
-                <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0">
+                <!-- Technical specs use an auto-width column and collapse outside wide Inventory. -->
+                <Border Grid.Column="1" Width="300"
+                        IsVisible="{Binding IsTechnicalPanelVisible}"
+                        BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0">
                     <DockPanel Margin="20,24">
                         <!-- Add to cart pinned bottom -->
                         <Button DockPanel.Dock="Bottom" Classes="accent" Command="{Binding AddToCartCommand}">
@@ -843,11 +906,36 @@
                                                     <TextBlock Grid.Column="2" Text="{Binding PriceLabel}" FontSize="14"
                                                                FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
                                                                VerticalAlignment="Center" Margin="10,0,14,0" />
-                                                    <Button Grid.Column="3" Classes="rowAdd" VerticalAlignment="Center"
-                                                            Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).AddProductToCartCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <TextBlock Classes="mono" Text="ADD TO CART" FontSize="10" FontWeight="Bold" />
-                                                    </Button>
+                                                    <Panel Grid.Column="3" MinWidth="96" VerticalAlignment="Center">
+                                                        <!-- Before adding: standard action. -->
+                                                        <Button Classes="rowAdd" HorizontalAlignment="Right"
+                                                                IsVisible="{Binding !IsInCart}"
+                                                                Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).AddProductToCartCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <TextBlock Classes="mono" Text="ADD TO CART" FontSize="10"
+                                                                       FontWeight="Bold" />
+                                                        </Button>
+
+                                                        <!-- In cart: swap the label for a light inline stepper. -->
+                                                        <Border IsVisible="{Binding IsInCart}" HorizontalAlignment="Right"
+                                                                Background="White" BorderThickness="1"
+                                                                BorderBrush="{StaticResource Accent}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Button Classes="qtyStep" Content="−"
+                                                                        Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).DecrementProductQuantityCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <TextBlock Text="{Binding CartQuantity}" Classes="mono"
+                                                                           Width="30" FontSize="13" FontWeight="Bold"
+                                                                           TextAlignment="Center"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{StaticResource TextPrimary}" />
+                                                                <Button Classes="qtyStep" Content="+"
+                                                                        IsEnabled="{Binding CanIncrease}"
+                                                                        Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).IncrementProductQuantityCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </Panel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

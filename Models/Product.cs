@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace PosApp.Models;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace PosApp.Models;
 /// (e.g. "Steel"), has a material/grade <see cref="Name"/> (e.g. "Alloy Steel
 /// Grade A36") and a specific purchasable <see cref="Dimension"/> (e.g. 2" x 4").
 /// </summary>
-public class Product
+public partial class Product : ObservableObject
 {
     public long Id { get; set; }
 
@@ -27,6 +29,17 @@ public class Product
     public double Price { get; set; }
 
     public int Stock { get; set; }
+
+    /// <summary>Quantity of this product currently present in the active cart.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInCart))]
+    [NotifyPropertyChangedFor(nameof(CanIncrease))]
+    public partial int CartQuantity { get; set; }
+
+    public bool IsInCart => CartQuantity > 0;
+
+    /// <summary>False once the cart quantity has consumed all available stock.</summary>
+    public bool CanIncrease => CartQuantity < Stock;
 
     // ----- Display helpers used by the inventory / stock views -----
 
