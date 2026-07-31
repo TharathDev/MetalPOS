@@ -62,6 +62,13 @@ public class ReceiptService
         return path;
     }
 
+    /// <summary>Re-opens an already generated receipt file for another print.</summary>
+    public void OpenExisting(string path)
+    {
+        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            TryOpen(path);
+    }
+
     private static string BuildHtml(ReceiptRequest r)
     {
         var change = Math.Max(0, r.AmountPaid - r.Total);

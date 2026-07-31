@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -85,6 +86,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsStockSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
     [NotifyPropertyChangedFor(nameof(IsCheckoutSection))]
+    [NotifyPropertyChangedFor(nameof(IsCompleteSection))]
     [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
     [NotifyPropertyChangedFor(nameof(SectionTitle))]
     [NotifyPropertyChangedFor(nameof(SectionSubtitle))]
@@ -94,6 +96,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsStockSection => ActiveSection == "Stock";
     public bool IsOrdersSection => ActiveSection is "Orders" or "Reports";
     public bool IsCheckoutSection => ActiveSection == "Checkout";
+
+    /// <summary>The post-sale "Order Completed" confirmation screen.</summary>
+    public bool IsCompleteSection => ActiveSection == "Complete";
 
     [ObservableProperty]
     public partial int CategoryColumns { get; set; } = 3;
@@ -132,6 +137,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         "Stock" => "Stock Management",
         "Orders" or "Reports" => "Orders & History",
         "Checkout" => "Checkout",
+        "Complete" => "Order Completed",
         _ => "Material Selection",
     };
 
@@ -140,6 +146,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         "Stock" => "Insert, update, or delete inventory items and create custom metal objects.",
         "Orders" or "Reports" => "Review completed sales and reprint receipts.",
         "Checkout" => "Verify quantities and pricing, add customer details, then complete the sale.",
+        "Complete" => "The sale has been recorded, stock updated, and the receipt sent to print.",
         _ => "Select a category to view specific stock dimensions and pricing.",
     };
 
@@ -381,6 +388,56 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         LoadCategories();
     }
 
+    // ==================== Order completed screen ====================
+    // A snapshot of the finished sale, taken before the cart is cleared so the
+    // confirmation screen can still show what was sold.
+
+    public ObservableCollection<CartLine> CompletedLines { get; } = new();
+
+    [ObservableProperty] public partial string CompletedSaleNumber { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedTimestamp { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedCustomer { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedContact { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedNote { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool CompletedHasContact { get; set; }
+    [ObservableProperty] public partial bool CompletedHasNote { get; set; }
+    [ObservableProperty] public partial string CompletedItemSummary { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedSubtotalLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedDiscountLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool CompletedHasDiscount { get; set; }
+    [ObservableProperty] public partial string CompletedTaxLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool CompletedHasTax { get; set; }
+    [ObservableProperty] public partial string CompletedTotalLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedPaymentLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedPaidLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedChangeLabel { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CompletedReceiptPath { get; set; } = string.Empty;
+
+    /// <summary>Starts a fresh order and returns to the product catalogue.</summary>
+    [RelayCommand]
+    private void StartNewOrder()
+    {
+        ActiveSection = "Inventory";
+        LoadCategories();
+        DetailSubtitle = "New order started - pick a material category.";
+    }
+
+    /// <summary>Acknowledges the completed sale and opens the orders list.</summary>
+    [RelayCommand]
+    private void AcknowledgeComplete()
+    {
+        ActiveSection = "Orders";
+        LoadOrders();
+    }
+
+    /// <summary>Re-opens the generated receipt file for another print.</summary>
+    [RelayCommand]
+    private void ReprintReceipt()
+    {
+        if (!string.IsNullOrWhiteSpace(CompletedReceiptPath))
+            _receipt.OpenExisting(CompletedReceiptPath);
+    }
+
     [RelayCommand]
     private void AddProductToCart(Product? product)
     {
@@ -536,9 +593,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         long saleId = _db.RecordSale(sale);
 
+        var receiptPath = string.Empty;
         try
         {
-            _receipt.GenerateAndPrint(new ReceiptRequest
+            receiptPath = _receipt.GenerateAndPrint(new ReceiptRequest
             {
                 SaleId = saleId,
                 Timestamp = timestamp,
@@ -563,6 +621,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         var itemCount = lines.Sum(l => l.Quantity);
 
+        // Snapshot everything the confirmation screen needs before clearing state.
+        CaptureCompletedSale(saleId, timestamp, lines, itemCount, total, paid, receiptPath);
+
         foreach (var product in CategoryProducts)
             product.CartQuantity = 0;
         Cart.Clear();
@@ -584,8 +645,57 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         IsDetailOpen = false;
         IsCartDrawerOpen = false;
-        ActiveSection = "Orders";
+        ActiveSection = "Complete";
         DetailSubtitle = $"Sale #{saleId:0000} complete: {itemCount} item(s), ${total:0.00}. Receipt printed.";
+    }
+
+    /// <summary>Copies the finished sale into the confirmation-screen properties.</summary>
+    private void CaptureCompletedSale(
+        long saleId, DateTime timestamp, List<CartLine> lines,
+        int itemCount, double total, double paid, string receiptPath)
+    {
+        CompletedLines.Clear();
+        foreach (var l in lines)
+        {
+            CompletedLines.Add(new CartLine
+            {
+                ProductId = l.ProductId,
+                Material = l.Material,
+                Dimension = l.Dimension,
+                Unit = l.Unit,
+                AvailableStock = l.AvailableStock,
+                UnitPrice = l.UnitPrice,
+                Quantity = l.Quantity,
+            });
+        }
+
+        CompletedSaleNumber = $"#{saleId:0000}";
+        CompletedTimestamp = timestamp.ToString("dddd, MMMM d, yyyy  h:mm tt");
+        CompletedCustomer = CustomerSummary;
+
+        var contact = new List<string>();
+        if (!string.IsNullOrWhiteSpace(CustomerPhone)) contact.Add(CustomerPhone.Trim());
+        if (!string.IsNullOrWhiteSpace(CustomerAddress)) contact.Add(CustomerAddress.Trim());
+        CompletedContact = string.Join("  ·  ", contact);
+        CompletedHasContact = contact.Count > 0;
+
+        CompletedNote = OrderNote?.Trim() ?? string.Empty;
+        CompletedHasNote = !string.IsNullOrWhiteSpace(CompletedNote);
+
+        CompletedItemSummary = itemCount == 1
+            ? "1 item sold"
+            : $"{itemCount} items sold";
+
+        CompletedSubtotalLabel = $"${Subtotal:0.00}";
+        CompletedDiscountLabel = $"-${DiscountAmount:0.00}";
+        CompletedHasDiscount = DiscountAmount > 0;
+        CompletedTaxLabel = TaxAmount > 0 ? $"${TaxAmount:0.00} ({TaxRate:0.##}%)" : "$0.00";
+        CompletedHasTax = TaxAmount > 0;
+        CompletedTotalLabel = $"${total:0.00}";
+        CompletedPaymentLabel = PaymentMethod;
+        CompletedPaidLabel = $"${paid:0.00}";
+        CompletedChangeLabel = $"${Math.Max(0, paid - total):0.00}";
+        CompletedReceiptPath = receiptPath;
     }
 
     private void ResetCheckoutFields()
