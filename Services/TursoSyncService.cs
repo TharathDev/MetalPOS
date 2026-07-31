@@ -186,13 +186,14 @@ public class TursoSyncService
         string url = _httpBase;
         string? baton = null;
 
-        // Phase 1: open transaction, ensure schema, clear existing rows.
+        // Phase 1: open transaction, then rebuild the remote tables from scratch.
+        // Dropping rather than DELETEing guarantees the remote schema matches the
+        // local one even after a local migration adds columns.
         var setup = new List<object> { Exec("BEGIN") };
+        foreach (var table in DatabaseService.BackupTables.Reverse())
+            setup.Add(Exec($"DROP TABLE IF EXISTS {table}"));
         foreach (var stmt in DatabaseService.SchemaStatements)
             setup.Add(Exec(stmt));
-        // Delete children first for FK safety.
-        foreach (var table in DatabaseService.BackupTables.Reverse())
-            setup.Add(Exec($"DELETE FROM {table}"));
 
         (url, baton) = await PostPipelineAsync(url, baton, setup, close: false, ct).ConfigureAwait(false);
 

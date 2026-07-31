@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using PosApp.Models;
 
@@ -29,11 +31,10 @@ public class DatabaseService
     public string DatabasePath => Path.Combine(AppContext.BaseDirectory, "metals_pos.db");
 
     /// <summary>
-    /// The individual CREATE TABLE statements that define the schema. Shared by
-    /// <see cref="Initialize"/> and the remote backup so the local and remote
-    /// databases always use the exact same structure.
+    /// CREATE TABLE statements defining the schema. Applied before any column
+    /// migration, because indexes may reference newly added columns.
     /// </summary>
-    public static readonly string[] SchemaStatements =
+    public static readonly string[] TableStatements =
     {
         @"CREATE TABLE IF NOT EXISTS Products (
             Id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,21 +47,54 @@ public class DatabaseService
             Stock     INTEGER NOT NULL DEFAULT 0
         )",
         @"CREATE TABLE IF NOT EXISTS Sales (
-            Id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            Timestamp     DATETIME NOT NULL,
-            TotalAmount   REAL     NOT NULL,
-            PaymentMethod TEXT     NOT NULL
+            Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            ReceiptNo       TEXT     NOT NULL DEFAULT '',
+            Timestamp       DATETIME NOT NULL,
+            CustomerName    TEXT     NOT NULL DEFAULT '',
+            CustomerPhone   TEXT     NOT NULL DEFAULT '',
+            CustomerAddress TEXT     NOT NULL DEFAULT '',
+            Note            TEXT     NOT NULL DEFAULT '',
+            Subtotal        REAL     NOT NULL DEFAULT 0,
+            Discount        REAL     NOT NULL DEFAULT 0,
+            TaxRate         REAL     NOT NULL DEFAULT 0,
+            TaxAmount       REAL     NOT NULL DEFAULT 0,
+            TotalAmount     REAL     NOT NULL,
+            AmountPaid      REAL     NOT NULL DEFAULT 0,
+            ChangeDue       REAL     NOT NULL DEFAULT 0,
+            PaymentMethod   TEXT     NOT NULL
         )",
+        // No foreign key on ProductId: sale history must survive a product being
+        // edited or deleted, so the description is copied onto the line instead.
         @"CREATE TABLE IF NOT EXISTS SaleItems (
             Id        INTEGER PRIMARY KEY AUTOINCREMENT,
             SaleId    INTEGER NOT NULL,
-            ProductId INTEGER NOT NULL,
+            ProductId INTEGER NOT NULL DEFAULT 0,
+            Material  TEXT    NOT NULL DEFAULT '',
+            Dimension TEXT    NOT NULL DEFAULT '',
+            Unit      TEXT    NOT NULL DEFAULT 'ea',
             Quantity  INTEGER NOT NULL,
             UnitPrice REAL    NOT NULL,
-            FOREIGN KEY (SaleId)    REFERENCES Sales(Id),
-            FOREIGN KEY (ProductId) REFERENCES Products(Id)
+            LineTotal REAL    NOT NULL DEFAULT 0,
+            FOREIGN KEY (SaleId) REFERENCES Sales(Id)
         )",
     };
+
+    /// <summary>
+    /// Index statements, applied only after the column migration has run so they
+    /// can safely reference columns added to an older database.
+    /// </summary>
+    public static readonly string[] IndexStatements =
+    {
+        "CREATE UNIQUE INDEX IF NOT EXISTS IX_Sales_ReceiptNo ON Sales(ReceiptNo) WHERE ReceiptNo <> ''",
+        "CREATE INDEX IF NOT EXISTS IX_SaleItems_SaleId ON SaleItems(SaleId)",
+    };
+
+    /// <summary>
+    /// Full schema (tables then indexes), used by the remote backup which drops
+    /// and recreates its tables on every sync.
+    /// </summary>
+    public static string[] SchemaStatements =>
+        TableStatements.Concat(IndexStatements).ToArray();
 
     /// <summary>Tables that are included in the remote backup, in FK-safe insert order.</summary>
     public static readonly string[] BackupTables = { "Products", "Sales", "SaleItems" };
@@ -82,11 +116,147 @@ public class DatabaseService
     public void Initialize()
     {
         using var connection = OpenConnection();
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = string.Join(";\n", SchemaStatements) + ";";
-        cmd.ExecuteNonQuery();
+
+        // 1. Tables first (a no-op when they already exist).
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = string.Join(";\n", TableStatements) + ";";
+            cmd.ExecuteNonQuery();
+        }
+
+        // 2. Then add any columns missing from an older database.
+        MigrateExistingSchema(connection);
+
+        // 3. Indexes last, so they can reference the newly added columns.
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = string.Join(";\n", IndexStatements) + ";";
+            cmd.ExecuteNonQuery();
+        }
 
         SeedProductsIfEmpty(connection);
+    }
+
+    /// <summary>
+    /// Brings a database created by an earlier version up to the current schema by
+    /// adding any missing columns, then backfills receipt numbers for sales that
+    /// pre-date the numbering scheme. Safe to run on every startup.
+    /// </summary>
+    private static void MigrateExistingSchema(SqliteConnection connection)
+    {
+        AddMissingColumns(connection, "Sales", new (string Name, string Definition)[]
+        {
+            ("ReceiptNo",       "TEXT NOT NULL DEFAULT ''"),
+            ("CustomerName",    "TEXT NOT NULL DEFAULT ''"),
+            ("CustomerPhone",   "TEXT NOT NULL DEFAULT ''"),
+            ("CustomerAddress", "TEXT NOT NULL DEFAULT ''"),
+            ("Note",            "TEXT NOT NULL DEFAULT ''"),
+            ("Subtotal",        "REAL NOT NULL DEFAULT 0"),
+            ("Discount",        "REAL NOT NULL DEFAULT 0"),
+            ("TaxRate",         "REAL NOT NULL DEFAULT 0"),
+            ("TaxAmount",       "REAL NOT NULL DEFAULT 0"),
+            ("AmountPaid",      "REAL NOT NULL DEFAULT 0"),
+            ("ChangeDue",       "REAL NOT NULL DEFAULT 0"),
+        });
+
+        AddMissingColumns(connection, "SaleItems", new (string Name, string Definition)[]
+        {
+            ("Material",  "TEXT NOT NULL DEFAULT ''"),
+            ("Dimension", "TEXT NOT NULL DEFAULT ''"),
+            ("Unit",      "TEXT NOT NULL DEFAULT 'ea'"),
+            ("LineTotal", "REAL NOT NULL DEFAULT 0"),
+        });
+
+        // Older rows stored only a total; treat it as the subtotal so the money
+        // breakdown at least adds up when the receipt is reprinted.
+        using (var fix = connection.CreateCommand())
+        {
+            fix.CommandText = @"
+                UPDATE Sales SET Subtotal = TotalAmount WHERE Subtotal = 0 AND TotalAmount <> 0;
+                UPDATE Sales SET AmountPaid = TotalAmount WHERE AmountPaid = 0 AND TotalAmount <> 0;
+                UPDATE SaleItems SET LineTotal = Quantity * UnitPrice WHERE LineTotal = 0;";
+            fix.ExecuteNonQuery();
+        }
+
+        BackfillReceiptNumbers(connection);
+    }
+
+    private static void AddMissingColumns(
+        SqliteConnection connection, string table, (string Name, string Definition)[] columns)
+    {
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var info = connection.CreateCommand())
+        {
+            info.CommandText = $"PRAGMA table_info({table});";
+            using var reader = info.ExecuteReader();
+            while (reader.Read())
+                existing.Add(reader.GetString(1));
+        }
+
+        foreach (var (name, definition) in columns)
+        {
+            if (existing.Contains(name))
+                continue;
+            using var alter = connection.CreateCommand();
+            alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {name} {definition};";
+            alter.ExecuteNonQuery();
+        }
+    }
+
+    /// <summary>Assigns receipt numbers to any sale that does not have one yet.</summary>
+    private static void BackfillReceiptNumbers(SqliteConnection connection)
+    {
+        var pending = new List<(long Id, DateTime Timestamp)>();
+        using (var find = connection.CreateCommand())
+        {
+            find.CommandText =
+                "SELECT Id, Timestamp FROM Sales WHERE ReceiptNo IS NULL OR ReceiptNo = '' ORDER BY Timestamp, Id;";
+            using var reader = find.ExecuteReader();
+            while (reader.Read())
+                pending.Add((reader.GetInt64(0), reader.GetDateTime(1)));
+        }
+
+        if (pending.Count == 0)
+            return;
+
+        using var transaction = connection.BeginTransaction();
+        foreach (var (id, timestamp) in pending)
+        {
+            var receiptNo = NextReceiptNo(connection, transaction, timestamp);
+            using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE Sales SET ReceiptNo = $no WHERE Id = $id;";
+            update.Parameters.AddWithValue("$no", receiptNo);
+            update.Parameters.AddWithValue("$id", id);
+            update.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }
+
+    /// <summary>
+    /// Builds the next receipt number for the given day: yyyyMMdd followed by a
+    /// 3-digit sequence that restarts at 001 each day (e.g. 20260731001).
+    /// Must be called inside the same transaction as the sale insert so two
+    /// concurrent sales cannot claim the same number.
+    /// </summary>
+    private static string NextReceiptNo(
+        SqliteConnection connection, SqliteTransaction? transaction, DateTime timestamp)
+    {
+        var day = timestamp.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+
+        using var cmd = connection.CreateCommand();
+        cmd.Transaction = transaction;
+        cmd.CommandText = @"
+            SELECT COALESCE(MAX(CAST(SUBSTR(ReceiptNo, 9) AS INTEGER)), 0)
+            FROM Sales
+            WHERE LENGTH(ReceiptNo) >= 11 AND SUBSTR(ReceiptNo, 1, 8) = $day;";
+        cmd.Parameters.AddWithValue("$day", day);
+
+        var last = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        var next = last + 1;
+
+        // Keeps 3 digits normally, and simply grows past 999 in a very busy day.
+        return day + next.ToString("D3", CultureInfo.InvariantCulture);
     }
 
     private static void SeedProductsIfEmpty(SqliteConnection connection)
@@ -351,16 +521,36 @@ public class DatabaseService
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction();
 
+        // Allocated inside the transaction so the daily sequence stays unique.
+        var receiptNo = NextReceiptNo(connection, transaction, sale.Timestamp);
+
         long saleId;
         using (var saleCmd = connection.CreateCommand())
         {
             saleCmd.Transaction = transaction;
             saleCmd.CommandText = @"
-                INSERT INTO Sales (Timestamp, TotalAmount, PaymentMethod)
-                VALUES ($ts, $total, $method);
+                INSERT INTO Sales
+                    (ReceiptNo, Timestamp, CustomerName, CustomerPhone, CustomerAddress, Note,
+                     Subtotal, Discount, TaxRate, TaxAmount, TotalAmount, AmountPaid, ChangeDue,
+                     PaymentMethod)
+                VALUES
+                    ($no, $ts, $cname, $cphone, $caddr, $note,
+                     $subtotal, $discount, $taxRate, $tax, $total, $paid, $change,
+                     $method);
                 SELECT last_insert_rowid();";
+            saleCmd.Parameters.AddWithValue("$no", receiptNo);
             saleCmd.Parameters.AddWithValue("$ts", sale.Timestamp);
+            saleCmd.Parameters.AddWithValue("$cname", sale.CustomerName ?? string.Empty);
+            saleCmd.Parameters.AddWithValue("$cphone", sale.CustomerPhone ?? string.Empty);
+            saleCmd.Parameters.AddWithValue("$caddr", sale.CustomerAddress ?? string.Empty);
+            saleCmd.Parameters.AddWithValue("$note", sale.Note ?? string.Empty);
+            saleCmd.Parameters.AddWithValue("$subtotal", sale.Subtotal);
+            saleCmd.Parameters.AddWithValue("$discount", sale.Discount);
+            saleCmd.Parameters.AddWithValue("$taxRate", sale.TaxRate);
+            saleCmd.Parameters.AddWithValue("$tax", sale.TaxAmount);
             saleCmd.Parameters.AddWithValue("$total", sale.TotalAmount);
+            saleCmd.Parameters.AddWithValue("$paid", sale.AmountPaid);
+            saleCmd.Parameters.AddWithValue("$change", sale.ChangeDue);
             saleCmd.Parameters.AddWithValue("$method", sale.PaymentMethod);
             saleId = Convert.ToInt64(saleCmd.ExecuteScalar());
         }
@@ -371,12 +561,18 @@ public class DatabaseService
             {
                 itemCmd.Transaction = transaction;
                 itemCmd.CommandText = @"
-                    INSERT INTO SaleItems (SaleId, ProductId, Quantity, UnitPrice)
-                    VALUES ($saleId, $productId, $qty, $price);";
+                    INSERT INTO SaleItems
+                        (SaleId, ProductId, Material, Dimension, Unit, Quantity, UnitPrice, LineTotal)
+                    VALUES
+                        ($saleId, $productId, $material, $dimension, $unit, $qty, $price, $lineTotal);";
                 itemCmd.Parameters.AddWithValue("$saleId", saleId);
                 itemCmd.Parameters.AddWithValue("$productId", item.ProductId);
+                itemCmd.Parameters.AddWithValue("$material", item.Material ?? string.Empty);
+                itemCmd.Parameters.AddWithValue("$dimension", item.Dimension ?? string.Empty);
+                itemCmd.Parameters.AddWithValue("$unit", string.IsNullOrWhiteSpace(item.Unit) ? "ea" : item.Unit);
                 itemCmd.Parameters.AddWithValue("$qty", item.Quantity);
                 itemCmd.Parameters.AddWithValue("$price", item.UnitPrice);
+                itemCmd.Parameters.AddWithValue("$lineTotal", item.LineTotal);
                 itemCmd.ExecuteNonQuery();
             }
 
@@ -394,37 +590,145 @@ public class DatabaseService
         }
 
         transaction.Commit();
+        sale.Id = saleId;
+        sale.ReceiptNo = receiptNo;
         return saleId;
     }
 
-    /// <summary>Returns the most recent sales for the Orders view.</summary>
-    public List<Sale> GetRecentSales(int limit = 50)
+    /// <summary>
+    /// Loads one sale with all of its line items, for viewing the order detail and
+    /// reprinting the original receipt.
+    /// </summary>
+    public Sale? GetSaleById(long saleId)
     {
-        var results = new List<Sale>();
         using var connection = OpenConnection();
+
+        Sale? sale = null;
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = SaleSelectSql + " WHERE s.Id = $id GROUP BY s.Id LIMIT 1;";
+            cmd.Parameters.AddWithValue("$id", saleId);
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+                sale = ReadSale(reader);
+        }
+
+        if (sale is null)
+            return null;
+
+        sale.Items = GetSaleItems(connection, saleId);
+        return sale;
+    }
+
+    /// <summary>Loads one sale by its receipt number.</summary>
+    public Sale? GetSaleByReceiptNo(string receiptNo)
+    {
+        if (string.IsNullOrWhiteSpace(receiptNo))
+            return null;
+
+        using var connection = OpenConnection();
+
+        Sale? sale = null;
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = SaleSelectSql + " WHERE s.ReceiptNo = $no GROUP BY s.Id LIMIT 1;";
+            cmd.Parameters.AddWithValue("$no", receiptNo.Trim());
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+                sale = ReadSale(reader);
+        }
+
+        if (sale is null)
+            return null;
+
+        sale.Items = GetSaleItems(connection, sale.Id);
+        return sale;
+    }
+
+    private static List<SaleItem> GetSaleItems(SqliteConnection connection, long saleId)
+    {
+        var items = new List<SaleItem>();
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
-            SELECT s.Id, s.Timestamp, s.TotalAmount, s.PaymentMethod,
-                   COALESCE(SUM(si.Quantity), 0) AS ItemCount
-            FROM Sales s
-            LEFT JOIN SaleItems si ON si.SaleId = s.Id
-            GROUP BY s.Id
-            ORDER BY s.Timestamp DESC
-            LIMIT $limit;";
-        cmd.Parameters.AddWithValue("$limit", limit);
+            SELECT Id, SaleId, ProductId, Material, Dimension, Unit, Quantity, UnitPrice, LineTotal
+            FROM SaleItems
+            WHERE SaleId = $id
+            ORDER BY Id;";
+        cmd.Parameters.AddWithValue("$id", saleId);
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            results.Add(new Sale
+            items.Add(new SaleItem
             {
                 Id = reader.GetInt64(0),
-                Timestamp = reader.GetDateTime(1),
-                TotalAmount = reader.GetDouble(2),
-                PaymentMethod = reader.GetString(3),
-                ItemCount = reader.GetInt32(4),
+                SaleId = reader.GetInt64(1),
+                ProductId = reader.GetInt64(2),
+                Material = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                Dimension = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                Unit = reader.IsDBNull(5) ? "ea" : reader.GetString(5),
+                Quantity = reader.GetInt32(6),
+                UnitPrice = reader.GetDouble(7),
+                LineTotal = reader.IsDBNull(8) ? 0 : reader.GetDouble(8),
             });
         }
+        return items;
+    }
+
+    private const string SaleSelectSql = @"
+        SELECT s.Id, s.ReceiptNo, s.Timestamp, s.CustomerName, s.CustomerPhone, s.CustomerAddress,
+               s.Note, s.Subtotal, s.Discount, s.TaxRate, s.TaxAmount, s.TotalAmount,
+               s.AmountPaid, s.ChangeDue, s.PaymentMethod,
+               COALESCE(SUM(si.Quantity), 0) AS ItemCount
+        FROM Sales s
+        LEFT JOIN SaleItems si ON si.SaleId = s.Id";
+
+    private static Sale ReadSale(SqliteDataReader reader) => new()
+    {
+        Id = reader.GetInt64(0),
+        ReceiptNo = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+        Timestamp = reader.GetDateTime(2),
+        CustomerName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+        CustomerPhone = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+        CustomerAddress = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+        Note = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+        Subtotal = reader.IsDBNull(7) ? 0 : reader.GetDouble(7),
+        Discount = reader.IsDBNull(8) ? 0 : reader.GetDouble(8),
+        TaxRate = reader.IsDBNull(9) ? 0 : reader.GetDouble(9),
+        TaxAmount = reader.IsDBNull(10) ? 0 : reader.GetDouble(10),
+        TotalAmount = reader.GetDouble(11),
+        AmountPaid = reader.IsDBNull(12) ? 0 : reader.GetDouble(12),
+        ChangeDue = reader.IsDBNull(13) ? 0 : reader.GetDouble(13),
+        PaymentMethod = reader.IsDBNull(14) ? "Cash" : reader.GetString(14),
+        ItemCount = reader.GetInt32(15),
+    };
+
+    /// <summary>
+    /// Returns recent sales (newest first) for the Orders view. An optional search
+    /// term matches the receipt number or the customer name.
+    /// </summary>
+    public List<Sale> GetRecentSales(int limit = 200, string? searchTerm = null)
+    {
+        var results = new List<Sale>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+
+        var filter = string.IsNullOrWhiteSpace(searchTerm)
+            ? string.Empty
+            : " WHERE s.ReceiptNo LIKE $term OR s.CustomerName LIKE $term";
+
+        cmd.CommandText = SaleSelectSql + filter + @"
+            GROUP BY s.Id
+            ORDER BY s.ReceiptNo DESC, s.Id DESC
+            LIMIT $limit;";
+        if (filter.Length > 0)
+            cmd.Parameters.AddWithValue("$term", "%" + searchTerm!.Trim() + "%");
+        cmd.Parameters.AddWithValue("$limit", limit);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            results.Add(ReadSale(reader));
+
         return results;
     }
 

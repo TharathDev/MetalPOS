@@ -401,6 +401,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     public ObservableCollection<CartLine> CompletedLines { get; } = new();
 
+    [ObservableProperty] public partial long CompletedSaleId { get; set; }
     [ObservableProperty] public partial string CompletedSaleNumber { get; set; } = string.Empty;
     [ObservableProperty] public partial string CompletedTimestamp { get; set; } = string.Empty;
     [ObservableProperty] public partial string CompletedCustomer { get; set; } = string.Empty;
@@ -437,12 +438,35 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         LoadOrders();
     }
 
-    /// <summary>Re-opens the generated receipt file for another print.</summary>
+    /// <summary>
+    /// Prints the just-completed receipt again. Regenerated from the stored sale
+    /// rather than reopening the file, so it works even if the file was removed.
+    /// </summary>
     [RelayCommand]
-    private void ReprintReceipt()
+    private void ReprintReceipt() => PrintStoredSale(CompletedSaleId);
+
+    /// <summary>
+    /// Rebuilds and prints the receipt for any stored sale. Can be run as many
+    /// times as needed; the sale is always read fresh from the database.
+    /// </summary>
+    private bool PrintStoredSale(long saleId)
     {
-        if (!string.IsNullOrWhiteSpace(CompletedReceiptPath))
-            _receipt.OpenExisting(CompletedReceiptPath);
+        if (saleId <= 0)
+            return false;
+
+        var sale = _db.GetSaleById(saleId);
+        if (sale is null)
+            return false;
+
+        try
+        {
+            _receipt.GenerateAndPrint(ReceiptRequest.FromSale(sale));
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -585,44 +609,42 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         var lines = Cart.ToList();
         var total = GrandTotal;
 
+        // Persist the complete order: customer, money breakdown and every line,
+        // so the receipt can be rebuilt exactly at any time in the future.
         var sale = new Sale
         {
             Timestamp = timestamp,
+            CustomerName = ReceiptCustomerName,
+            CustomerPhone = CustomerPhone?.Trim() ?? string.Empty,
+            CustomerAddress = CustomerAddress?.Trim() ?? string.Empty,
+            Note = OrderNote?.Trim() ?? string.Empty,
+            Subtotal = Subtotal,
+            Discount = DiscountAmount,
+            TaxRate = TaxRate,
+            TaxAmount = TaxAmount,
             TotalAmount = total,
+            AmountPaid = paid,
+            ChangeDue = Math.Max(0, paid - total),
             PaymentMethod = PaymentMethod,
             Items = lines.Select(l => new SaleItem
             {
                 ProductId = l.ProductId,
+                Material = l.Material,
+                Dimension = l.Dimension,
+                Unit = l.Unit,
                 Quantity = l.Quantity,
                 UnitPrice = l.UnitPrice,
+                LineTotal = l.LineTotal,
             }).ToList(),
         };
 
+        // RecordSale allocates the receipt number and fills it back onto the sale.
         long saleId = _db.RecordSale(sale);
 
         var receiptPath = string.Empty;
         try
         {
-            receiptPath = _receipt.GenerateAndPrint(new ReceiptRequest
-            {
-                SaleId = saleId,
-                Timestamp = timestamp,
-                Lines = lines,
-                Subtotal = Subtotal,
-                Discount = DiscountAmount,
-                TaxRate = TaxRate,
-                Tax = TaxAmount,
-                Total = total,
-                PaymentMethod = PaymentMethod,
-                AmountPaid = paid,
-                CustomerName = ReceiptCustomerName,
-                CustomerPhone = CustomerPhone?.Trim() ?? string.Empty,
-                CustomerAddress = CustomerAddress?.Trim() ?? string.Empty,
-                Note = OrderNote?.Trim() ?? string.Empty,
-                // Walk-in shop: delivery defaults to the customer's own details.
-                DeliveryAddress = CustomerAddress?.Trim() ?? string.Empty,
-                DeliveryContact = CustomerPhone?.Trim() ?? string.Empty,
-            });
+            receiptPath = _receipt.GenerateAndPrint(ReceiptRequest.FromSale(sale));
         }
         catch
         {
@@ -632,7 +654,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         var itemCount = lines.Sum(l => l.Quantity);
 
         // Snapshot everything the confirmation screen needs before clearing state.
-        CaptureCompletedSale(saleId, timestamp, lines, itemCount, total, paid, receiptPath);
+        CaptureCompletedSale(sale, lines, itemCount, receiptPath);
 
         foreach (var product in CategoryProducts)
             product.CartQuantity = 0;
@@ -661,8 +683,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     /// <summary>Copies the finished sale into the confirmation-screen properties.</summary>
     private void CaptureCompletedSale(
-        long saleId, DateTime timestamp, List<CartLine> lines,
-        int itemCount, double total, double paid, string receiptPath)
+        Sale sale, List<CartLine> lines, int itemCount, string receiptPath)
     {
         CompletedLines.Clear();
         foreach (var l in lines)
@@ -679,32 +700,26 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             });
         }
 
-        CompletedSaleNumber = $"#{saleId:0000}";
-        CompletedTimestamp = timestamp.ToString("dddd, MMMM d, yyyy  h:mm tt");
-        CompletedCustomer = CustomerSummary;
+        CompletedSaleId = sale.Id;
+        CompletedSaleNumber = sale.ReceiptNoDisplay;
+        CompletedTimestamp = sale.Timestamp.ToString("dddd, MMMM d, yyyy  h:mm tt");
+        CompletedCustomer = sale.CustomerDisplay;
+        CompletedContact = sale.ContactDisplay;
+        CompletedHasContact = sale.HasContact;
+        CompletedNote = sale.Note;
+        CompletedHasNote = sale.HasNote;
 
-        var contact = new List<string>();
-        if (!string.IsNullOrWhiteSpace(CustomerPhone)) contact.Add(CustomerPhone.Trim());
-        if (!string.IsNullOrWhiteSpace(CustomerAddress)) contact.Add(CustomerAddress.Trim());
-        CompletedContact = string.Join("  ·  ", contact);
-        CompletedHasContact = contact.Count > 0;
+        CompletedItemSummary = itemCount == 1 ? "1 item sold" : $"{itemCount} items sold";
 
-        CompletedNote = OrderNote?.Trim() ?? string.Empty;
-        CompletedHasNote = !string.IsNullOrWhiteSpace(CompletedNote);
-
-        CompletedItemSummary = itemCount == 1
-            ? "1 item sold"
-            : $"{itemCount} items sold";
-
-        CompletedSubtotalLabel = $"${Subtotal:0.00}";
-        CompletedDiscountLabel = $"-${DiscountAmount:0.00}";
-        CompletedHasDiscount = DiscountAmount > 0;
-        CompletedTaxLabel = TaxAmount > 0 ? $"${TaxAmount:0.00} ({TaxRate:0.##}%)" : "$0.00";
-        CompletedHasTax = TaxAmount > 0;
-        CompletedTotalLabel = $"${total:0.00}";
-        CompletedPaymentLabel = PaymentMethod;
-        CompletedPaidLabel = $"${paid:0.00}";
-        CompletedChangeLabel = $"${Math.Max(0, paid - total):0.00}";
+        CompletedSubtotalLabel = sale.SubtotalDisplay;
+        CompletedDiscountLabel = sale.DiscountDisplay;
+        CompletedHasDiscount = sale.HasDiscount;
+        CompletedTaxLabel = sale.TaxDisplay;
+        CompletedHasTax = sale.HasTax;
+        CompletedTotalLabel = sale.TotalDisplay;
+        CompletedPaymentLabel = sale.PaymentMethod;
+        CompletedPaidLabel = sale.AmountPaidDisplay;
+        CompletedChangeLabel = sale.ChangeDueDisplay;
         CompletedReceiptPath = receiptPath;
     }
 
@@ -908,17 +923,95 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [ObservableProperty]
     public partial string OrdersSummary { get; set; } = "No sales yet.";
 
+    /// <summary>Filters the orders list by receipt number or customer name.</summary>
+    [ObservableProperty]
+    public partial string OrderSearchText { get; set; } = string.Empty;
+
+    partial void OnOrderSearchTextChanged(string value) => LoadOrders();
+
+    // ----- Order detail drawer -----
+
+    [ObservableProperty]
+    public partial bool IsOrderDetailOpen { get; set; }
+
+    /// <summary>The order being inspected, loaded with all of its line items.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedOrder))]
+    public partial Sale? SelectedOrder { get; set; }
+
+    public bool HasSelectedOrder => SelectedOrder is not null;
+
+    public ObservableCollection<SaleItem> SelectedOrderItems { get; } = new();
+
+    [ObservableProperty]
+    public partial string OrderDetailStatus { get; set; } = string.Empty;
+
     private void LoadOrders()
     {
         RecentSales.Clear();
-        var sales = _db.GetRecentSales();
+        var sales = _db.GetRecentSales(200, OrderSearchText);
         foreach (var s in sales)
             RecentSales.Add(s);
 
         var total = sales.Sum(s => s.TotalAmount);
-        OrdersSummary = sales.Count == 0
-            ? "No sales yet."
-            : $"{sales.Count} sale(s) · ${total:0.00} total revenue";
+        if (sales.Count == 0)
+        {
+            OrdersSummary = string.IsNullOrWhiteSpace(OrderSearchText)
+                ? "No sales yet."
+                : $"No orders match \"{OrderSearchText}\".";
+        }
+        else
+        {
+            OrdersSummary = $"{sales.Count} order(s) · ${total:0.00} total revenue";
+        }
+    }
+
+    /// <summary>Opens the full detail of a stored order.</summary>
+    [RelayCommand]
+    private void OpenOrderDetail(Sale? order)
+    {
+        if (order is null)
+            return;
+
+        // Always re-read so the detail reflects exactly what is stored.
+        var full = _db.GetSaleById(order.Id);
+        if (full is null)
+        {
+            OrderDetailStatus = "This order could not be found.";
+            return;
+        }
+
+        SelectedOrder = full;
+        SelectedOrderItems.Clear();
+        foreach (var item in full.Items)
+            SelectedOrderItems.Add(item);
+
+        OrderDetailStatus = string.Empty;
+        IsOrderDetailOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseOrderDetail() => IsOrderDetailOpen = false;
+
+    /// <summary>Reprints the selected order's receipt; repeatable any number of times.</summary>
+    [RelayCommand]
+    private void PrintSelectedOrder()
+    {
+        if (SelectedOrder is null)
+            return;
+
+        OrderDetailStatus = PrintStoredSale(SelectedOrder.Id)
+            ? $"Receipt {SelectedOrder.ReceiptNoDisplay} sent to print at {DateTime.Now:h:mm tt}."
+            : "Could not generate the receipt.";
+    }
+
+    /// <summary>Reprints directly from a row in the orders list.</summary>
+    [RelayCommand]
+    private void PrintOrder(Sale? order)
+    {
+        if (order is null)
+            return;
+        PrintStoredSale(order.Id);
     }
 
     // ==================== Misc commands ====================

@@ -1209,18 +1209,27 @@
 
                         <!-- ============ ORDERS / HISTORY SECTION ============ -->
                         <StackPanel IsVisible="{Binding IsOrdersSection}" Margin="0,22,0,0" Spacing="12">
-                            <Border Background="{StaticResource ChipBg}" CornerRadius="10" Padding="16,12">
-                                <TextBlock Text="{Binding OrdersSummary}" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{StaticResource TextPrimary}" />
-                            </Border>
+                            <Grid ColumnDefinitions="*,300" ColumnSpacing="12">
+                                <Border Grid.Column="0" Background="{StaticResource ChipBg}" CornerRadius="10"
+                                        Padding="16,12">
+                                    <TextBlock Text="{Binding OrdersSummary}" FontSize="14" FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                </Border>
+                                <TextBox Grid.Column="1" Classes="field" Text="{Binding OrderSearchText}"
+                                         VerticalAlignment="Center"
+                                         PlaceholderText="Search receipt no or customer" />
+                            </Grid>
                             <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12">
                                 <DockPanel>
-                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="120,*,120,110"
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="140,120,*,90,110,140"
                                           Background="#FAFAFA" Height="40">
-                                        <TextBlock Classes="th" Text="SALE" VerticalAlignment="Center" Margin="14,0,0,0" />
+                                        <TextBlock Classes="th" Text="RECEIPT NO" VerticalAlignment="Center" Margin="14,0,0,0" />
                                         <TextBlock Grid.Column="1" Classes="th" Text="DATE" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="2" Classes="th" Text="ITEMS" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="3" Classes="th" Text="TOTAL" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Classes="th" Text="CUSTOMER" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="3" Classes="th" Text="ITEMS" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Classes="th" Text="TOTAL" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="5" Classes="th" Text="ACTIONS" VerticalAlignment="Center" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" />
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" MaxHeight="540">
@@ -1229,20 +1238,42 @@
                                                 <DataTemplate x:DataType="models:Sale">
                                                     <Border BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,0,1"
                                                             Padding="14,11">
-                                                        <Grid ColumnDefinitions="120,*,120,110" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding SaleNumber}" Classes="mono" FontSize="13"
-                                                                       FontWeight="Bold" VerticalAlignment="Center"
+                                                        <Grid ColumnDefinitions="140,120,*,90,110,140"
+                                                              VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding ReceiptNoDisplay}" Classes="mono"
+                                                                       FontSize="13" FontWeight="Bold"
+                                                                       VerticalAlignment="Center"
                                                                        Foreground="{StaticResource Accent}" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding TimestampDisplay}"
+                                                            <TextBlock Grid.Column="1" Text="{Binding DateDisplay}"
                                                                        FontSize="13" VerticalAlignment="Center"
                                                                        Foreground="{StaticResource TextMuted}" />
-                                                            <TextBlock Grid.Column="2" Text="{Binding ItemCountDisplay}"
+                                                            <TextBlock Grid.Column="2" Text="{Binding CustomerDisplay}"
+                                                                       FontSize="13" VerticalAlignment="Center"
+                                                                       Margin="0,0,10,0"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Foreground="{StaticResource TextPrimary}" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding ItemCountDisplay}"
                                                                        FontSize="13" VerticalAlignment="Center"
                                                                        Foreground="{StaticResource TextMuted}" />
-                                                            <TextBlock Grid.Column="3" Text="{Binding TotalDisplay}"
+                                                            <TextBlock Grid.Column="4" Text="{Binding TotalDisplay}"
                                                                        FontSize="14" FontWeight="Bold"
                                                                        VerticalAlignment="Center"
                                                                        Foreground="{StaticResource TextPrimary}" />
+                                                            <StackPanel Grid.Column="5" Orientation="Horizontal"
+                                                                        Spacing="6" VerticalAlignment="Center">
+                                                                <Button Classes="ghost" Padding="10,6"
+                                                                        Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).OpenOrderDetailCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <TextBlock Text="View" FontSize="12" />
+                                                                </Button>
+                                                                <Button Classes="iconBtn"
+                                                                        ToolTip.Tip="Print receipt"
+                                                                        Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).PrintOrderCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <Path Classes="icon" Width="15" Height="15"
+                                                                          Data="M7 8 V4 H17 V8 M7 17 H5 V10 H19 V17 H17 M7 14 H17 V20 H7 Z" />
+                                                                </Button>
+                                                            </StackPanel>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -1550,6 +1581,176 @@
                                     <TextBox Classes="field" Text="{Binding FormStockText}" PlaceholderText="0" />
                                 </StackPanel>
                             </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Panel>
+
+        <!-- ===== Right drawer: stored order detail + reprint ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsOrderDetailOpen}"
+               ClipToBounds="True">
+            <Button Classes="scrim" Classes.open="{Binding IsOrderDetailOpen}"
+                    Command="{Binding CloseOrderDetailCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <Border Classes="drawer" Classes.open="{Binding IsOrderDetailOpen}"
+                    Width="470" HorizontalAlignment="Right" Background="White"
+                    BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                    BoxShadow="-8 0 30 0 #1A000000">
+                <DockPanel DataContext="{Binding SelectedOrder}">
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="22,22,18,0">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="mono" Text="RECEIPT NO" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <TextBlock Classes="mono" Text="{Binding ReceiptNoDisplay}"
+                                       FontSize="22" FontWeight="Bold"
+                                       Foreground="{StaticResource Accent}" />
+                            <TextBlock Text="{Binding TimestampDisplay}" FontSize="12"
+                                       Foreground="{StaticResource TextMuted}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top" Width="30" Height="30"
+                                Command="{Binding $parent[Window].((vm:MaterialSelectionViewModel)DataContext).CloseOrderDetailCommand}">
+                            <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
+                        </Button>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}"
+                            Margin="0,16,0,0" />
+
+                    <!-- Reprint action -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}"
+                            BorderThickness="0,1,0,0" Padding="22,16">
+                        <StackPanel Spacing="10">
+                            <Button Classes="primary" HorizontalAlignment="Stretch" Padding="12,13"
+                                    Command="{Binding $parent[Window].((vm:MaterialSelectionViewModel)DataContext).PrintSelectedOrderCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                          Data="M7 8 V4 H17 V8 M7 17 H5 V10 H19 V17 H17 M7 14 H17 V20 H7 Z" />
+                                    <TextBlock Text="Print Receipt" FontWeight="Bold" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding $parent[Window].((vm:MaterialSelectionViewModel)DataContext).OrderDetailStatus}"
+                                       FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center"
+                                       Foreground="{StaticResource TextMuted}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Body -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="22,16,22,0">
+                        <StackPanel Spacing="14">
+                            <!-- Customer -->
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="mono" Text="CUSTOMER" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="{Binding CustomerDisplay}" FontSize="14" FontWeight="SemiBold"
+                                           TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="{Binding ContactDisplay}" FontSize="12" TextWrapping="Wrap"
+                                           IsVisible="{Binding HasContact}"
+                                           Foreground="{StaticResource TextMuted}" />
+                            </StackPanel>
+
+                            <!-- Items -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="mono" Text="ITEMS" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource TextMuted}" />
+                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1">
+                                    <ItemsControl ItemsSource="{Binding $parent[Window].((vm:MaterialSelectionViewModel)DataContext).SelectedOrderItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:SaleItem">
+                                                <Border BorderBrush="{StaticResource HairLine}"
+                                                        BorderThickness="0,0,0,1" Padding="12,9">
+                                                    <Grid ColumnDefinitions="*,44,84,84">
+                                                        <StackPanel Grid.Column="0" Spacing="1" Margin="0,0,8,0">
+                                                            <TextBlock Text="{Binding Material}" FontSize="13"
+                                                                       FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                       Foreground="{StaticResource TextPrimary}" />
+                                                            <TextBlock Text="{Binding DimensionDisplay}" FontSize="11"
+                                                                       Foreground="{StaticResource TextMuted}" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Quantity}"
+                                                                   Classes="mono" FontSize="12" TextAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding UnitPriceDisplay}"
+                                                                   FontSize="12" TextAlignment="Right"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                        <TextBlock Grid.Column="3" Text="{Binding LineTotalDisplay}"
+                                                                   FontSize="13" FontWeight="Bold"
+                                                                   TextAlignment="Right" VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Money breakdown -->
+                            <StackPanel Spacing="6">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="Subtotal" FontSize="13"
+                                               Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding SubtotalDisplay}" FontSize="13"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasDiscount}">
+                                    <TextBlock Grid.Column="0" Text="Discount" FontSize="13"
+                                               Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding DiscountDisplay}" FontSize="13"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasTax}">
+                                    <TextBlock Grid.Column="0" Text="Tax" FontSize="13"
+                                               Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding TaxDisplay}" FontSize="13"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                </Grid>
+                                <Border Height="2" Background="{StaticResource TextPrimary}" Margin="0,4,0,2" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Classes="mono" Text="TOTAL" FontSize="13"
+                                               FontWeight="Bold" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding TotalDisplay}" FontSize="22"
+                                               FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Payment -->
+                            <Border Background="{StaticResource ChipBg}" Padding="14,12">
+                                <Grid ColumnDefinitions="*,*,*">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Classes="mono" Text="METHOD" FontSize="10"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Text="{Binding PaymentMethod}" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Classes="mono" Text="PAID" FontSize="10"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Text="{Binding AmountPaidDisplay}" FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="2">
+                                        <TextBlock Classes="mono" Text="CHANGE" FontSize="10"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Text="{Binding ChangeDueDisplay}" FontSize="13" FontWeight="Bold"
+                                                   Foreground="{StaticResource Accent}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Note -->
+                            <StackPanel Spacing="3" IsVisible="{Binding HasNote}">
+                                <TextBlock Classes="mono" Text="NOTE" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="{Binding Note}" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextPrimary}" />
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

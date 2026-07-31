@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using PosApp.Models;
@@ -13,11 +14,25 @@ namespace PosApp.Services;
 /// All values needed to render one receipt. Customer details are supplied per
 /// sale and are never persisted to the database.
 /// </summary>
+/// <summary>One printable line on a receipt, independent of the cart.</summary>
+public class ReceiptLine
+{
+    public string Description { get; init; } = string.Empty;
+    public string Unit { get; init; } = "ea";
+    public int Quantity { get; init; }
+    public double UnitPrice { get; init; }
+    public double LineTotal { get; init; }
+}
+
 public class ReceiptRequest
 {
     public long SaleId { get; init; }
+
+    /// <summary>Receipt number in the form yyyyMMdd + 3-digit daily sequence.</summary>
+    public string ReceiptNo { get; init; } = string.Empty;
+
     public DateTime Timestamp { get; init; } = DateTime.Now;
-    public IReadOnlyList<CartLine> Lines { get; init; } = Array.Empty<CartLine>();
+    public IReadOnlyList<ReceiptLine> Lines { get; init; } = Array.Empty<ReceiptLine>();
     public double Subtotal { get; init; }
     public double Discount { get; init; }
     public double TaxRate { get; init; }
@@ -36,6 +51,37 @@ public class ReceiptRequest
     public string DeliveryAddress { get; init; } = string.Empty;
     public string RequestedShipDate { get; init; } = string.Empty;
     public string DeliveryContact { get; init; } = string.Empty;
+
+    /// <summary>Builds a request from a stored sale, so any past order reprints identically.</summary>
+    public static ReceiptRequest FromSale(Sale sale) => new()
+    {
+        SaleId = sale.Id,
+        ReceiptNo = sale.ReceiptNo,
+        Timestamp = sale.Timestamp,
+        Lines = sale.Items.Select(i => new ReceiptLine
+        {
+            Description = string.IsNullOrWhiteSpace(i.Dimension)
+                ? i.Material
+                : $"{i.Material} - {i.Dimension}",
+            Unit = i.Unit,
+            Quantity = i.Quantity,
+            UnitPrice = i.UnitPrice,
+            LineTotal = i.LineTotal,
+        }).ToList(),
+        Subtotal = sale.Subtotal,
+        Discount = sale.Discount,
+        TaxRate = sale.TaxRate,
+        Tax = sale.TaxAmount,
+        Total = sale.TotalAmount,
+        PaymentMethod = sale.PaymentMethod,
+        AmountPaid = sale.AmountPaid,
+        CustomerName = string.IsNullOrWhiteSpace(sale.CustomerName) ? "អតិថិជនទូទៅ" : sale.CustomerName,
+        CustomerPhone = sale.CustomerPhone,
+        CustomerAddress = sale.CustomerAddress,
+        DeliveryAddress = sale.CustomerAddress,
+        DeliveryContact = sale.CustomerPhone,
+        Note = sale.Note,
+    };
 }
 
 /// <summary>
@@ -62,7 +108,10 @@ public class ReceiptService
 
         var html = BuildHtml(request);
 
-        var fileName = $"Receipt-{request.SaleId:0000}-{request.Timestamp:yyyyMMdd-HHmmss}.html";
+        var number = string.IsNullOrWhiteSpace(request.ReceiptNo)
+            ? request.SaleId.ToString("0000", CultureInfo.InvariantCulture)
+            : request.ReceiptNo;
+        var fileName = $"Receipt-{number}.html";
         var path = Path.Combine(ReceiptsDirectory, fileName);
         File.WriteAllText(path, html, Encoding.UTF8);
 
@@ -86,20 +135,19 @@ public class ReceiptService
     {
         var inv = CultureInfo.InvariantCulture;
         var change = Math.Max(0, r.AmountPaid - r.Total);
+        var receiptNo = string.IsNullOrWhiteSpace(r.ReceiptNo)
+            ? r.SaleId.ToString("0000000", inv)
+            : r.ReceiptNo;
 
         var rows = new StringBuilder();
         var index = 0;
         foreach (var line in r.Lines)
         {
             index++;
-            var description = string.IsNullOrWhiteSpace(line.Dimension)
-                ? line.Material
-                : $"{line.Material} - {line.Dimension}";
-
             rows.Append($@"
         <tr>
           <td class=""c"">{index}</td>
-          <td class=""desc"">{Encode(description)}</td>
+          <td class=""desc"">{Encode(line.Description)}</td>
           <td class=""r"">{Encode(line.Unit)}</td>
           <td class=""r"">{line.Quantity.ToString("N2", inv)}</td>
           <td class=""r"">{line.UnitPrice.ToString("N3", inv)}</td>
@@ -133,7 +181,7 @@ public class ReceiptService
 <html lang=""km"">
 <head>
 <meta charset=""utf-8"" />
-<title>ប័ណ្ណបញ្ជាក់ការលក់ {r.SaleId:0000}</title>
+<title>ប័ណ្ណបញ្ជាក់ការលក់ {Encode(receiptNo)}</title>
 <style>
   /* Khmer-first font stack using fonts shipped with macOS / Windows / Linux. */
   :root {{
@@ -223,7 +271,7 @@ public class ReceiptService
       </div>
       <div class=""col right"">
         <div class=""kv""><span class=""k"">លេខបញ្ជាលក់ <span class=""sl"">/</span> <span class=""cn"">銷售訂單號</span> <span class=""sl"">/</span> <span class=""en"">Sales Order No</span> :</span>
-                        <span class=""v en"">{r.SaleId:0000000}</span></div>
+                        <span class=""v en"">{Encode(receiptNo)}</span></div>
         <div class=""kv""><span class=""k"">របៀបដឹកជញ្ជូន <span class=""sl"">/</span> <span class=""cn"">交貨方式</span> <span class=""sl"">/</span> <span class=""en"">Mode of Delivery</span> :</span>
                         <span class=""v en"">{Encode(r.ModeOfDelivery)}</span></div>
         <div class=""kv""><span class=""k"">ថ្ងៃទីឯកសារ <span class=""sl"">/</span> <span class=""cn"">單據日期</span> <span class=""sl"">/</span> <span class=""en"">Document Date</span> :</span>
