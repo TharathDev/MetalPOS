@@ -120,14 +120,14 @@ public class ReceiptService
 
         var taxRow = r.Tax > 0
             ? $@"<tr>
-            <td class=""tl"">អាករ <span class=""cn"">稅</span> <span class=""en"">TAX ({r.TaxRate.ToString("0.##", inv)}%)</span></td>
+            <td class=""tl"">អាករ <span class=""sl"">/</span> <span class=""cn"">稅</span> <span class=""sl"">/</span> <span class=""en"">TAX ({r.TaxRate.ToString("0.##", inv)}%)</span></td>
             <td class=""tv"">{r.Tax.ToString("N2", inv)}</td>
           </tr>"
             : string.Empty;
 
         var noteBlock = string.IsNullOrWhiteSpace(r.Note)
             ? string.Empty
-            : $@"<div class=""note""><b>សម្គាល់ <span class=""en"">NOTE</span>:</b> {Encode(r.Note)}</div>";
+            : $@"<div class=""note""><b>សម្គាល់ <span class=""sl"">/</span> <span class=""cn"">備註</span> <span class=""sl"">/</span> <span class=""en"">NOTE</span> :</b> {Encode(r.Note)}</div>";
 
         return $@"<!DOCTYPE html>
 <html lang=""km"">
@@ -145,6 +145,8 @@ public class ReceiptService
   .sheet {{ width: 760px; margin: 0 auto; background: #fff; padding: 16px 18px 22px; border: 1px solid #999; }}
   .cn {{ font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; }}
   .en {{ font-family: Arial, Helvetica, sans-serif; }}
+  /* Separator between the Khmer / Chinese / English parts of a label. */
+  .sl {{ padding: 0 3px; }}
 
   /* ---- header ---- */
   .head {{ display: flex; align-items: flex-start; gap: 12px; }}
@@ -211,7 +213,7 @@ public class ReceiptService
 
     <div class=""head"">
       <div class=""col"">
-        <div class=""kv""><span class=""k"">លេខសម្រង់តម្លៃ <span class=""en"">Quotation No</span> :</span>
+        <div class=""kv""><span class=""k"">លេខសម្រង់តម្លៃ <span class=""sl"">/</span> <span class=""cn"">報價單號</span> <span class=""sl"">/</span> <span class=""en"">Quotation No</span> :</span>
                         <span class=""v"">{Encode(r.QuotationNo)}</span></div>
       </div>
       <div class=""mid"">
@@ -220,11 +222,11 @@ public class ReceiptService
         <div class=""title-en en"">SALES CONFIRMATION</div>
       </div>
       <div class=""col right"">
-        <div class=""kv""><span class=""k"">លេខបញ្ជាលក់ <span class=""en"">Sales Order No</span> :</span>
+        <div class=""kv""><span class=""k"">លេខបញ្ជាលក់ <span class=""sl"">/</span> <span class=""cn"">銷售訂單號</span> <span class=""sl"">/</span> <span class=""en"">Sales Order No</span> :</span>
                         <span class=""v en"">{r.SaleId:0000000}</span></div>
-        <div class=""kv""><span class=""k"">របៀបដឹកជញ្ជូន <span class=""en"">Mode of Delivery</span> :</span>
+        <div class=""kv""><span class=""k"">របៀបដឹកជញ្ជូន <span class=""sl"">/</span> <span class=""cn"">交貨方式</span> <span class=""sl"">/</span> <span class=""en"">Mode of Delivery</span> :</span>
                         <span class=""v en"">{Encode(r.ModeOfDelivery)}</span></div>
-        <div class=""kv""><span class=""k"">ថ្ងៃទីឯកសារ <span class=""en"">Document Date</span> :</span>
+        <div class=""kv""><span class=""k"">ថ្ងៃទីឯកសារ <span class=""sl"">/</span> <span class=""cn"">單據日期</span> <span class=""sl"">/</span> <span class=""en"">Document Date</span> :</span>
                         <span class=""v en"">{r.Timestamp:dd-MM-yyyy}</span></div>
       </div>
     </div>
@@ -232,27 +234,27 @@ public class ReceiptService
     <div class=""info"">
       <table>
         <tr>
-          <td class=""lbl"">អតិថិជន <span class=""cn"">客户</span> <span class=""en"">Customer</span></td>
+          <td class=""lbl"">អតិថិជន <span class=""sl"">/</span> <span class=""cn"">客户</span> <span class=""sl"">/</span> <span class=""en"">Customer</span></td>
           <td class=""sep"">:</td><td class=""val"">{Encode(r.CustomerName)}</td>
         </tr>
         <tr>
-          <td class=""lbl"">អាសយដ្ឋាន <span class=""cn"">地址</span> <span class=""en"">Address</span></td>
+          <td class=""lbl"">អាសយដ្ឋាន <span class=""sl"">/</span> <span class=""cn"">地址</span> <span class=""sl"">/</span> <span class=""en"">Address</span></td>
           <td class=""sep"">:</td><td class=""val"">{Encode(r.CustomerAddress)}</td>
         </tr>
         <tr>
-          <td class=""lbl"">លេខទូរស័ព្ទ <span class=""cn"">電話</span> <span class=""en"">Tel</span></td>
+          <td class=""lbl"">លេខទូរស័ព្ទ <span class=""sl"">/</span> <span class=""cn"">電話</span> <span class=""sl"">/</span> <span class=""en"">Tel</span></td>
           <td class=""sep"">:</td><td class=""val en"">{Encode(r.CustomerPhone)}</td>
         </tr>
         <tr>
-          <td class=""lbl"">អាសយដ្ឋានដឹកជញ្ជូន <span class=""cn"">送貨地址</span> <span class=""en"">Delivery Address</span></td>
+          <td class=""lbl"">អាសយដ្ឋានដឹកជញ្ជូន <span class=""sl"">/</span> <span class=""cn"">送貨地址</span> <span class=""sl"">/</span> <span class=""en"">Delivery Address</span></td>
           <td class=""sep"">:</td><td class=""val"">{Encode(r.DeliveryAddress)}</td>
         </tr>
         <tr>
-          <td class=""lbl"">កាលបរិច្ឆេទស្នើសុំដឹកជញ្ជូន <span class=""en"">Requested Ship Date</span></td>
+          <td class=""lbl"">កាលបរិច្ឆេទស្នើសុំដឹកជញ្ជូន <span class=""sl"">/</span> <span class=""cn"">要求送貨日期</span> <span class=""sl"">/</span> <span class=""en"">Requested Ship Date</span></td>
           <td class=""sep"">:</td><td class=""val en"">{Encode(r.RequestedShipDate)}</td>
         </tr>
         <tr>
-          <td class=""lbl"">ទំនាក់ទំនងដឹកជញ្ជូន <span class=""en"">Delivery Contact</span></td>
+          <td class=""lbl"">ទំនាក់ទំនងដឹកជញ្ជូន <span class=""sl"">/</span> <span class=""cn"">送貨聯絡</span> <span class=""sl"">/</span> <span class=""en"">Delivery Contact</span></td>
           <td class=""sep"">:</td><td class=""val"">{Encode(r.DeliveryContact)}</td>
         </tr>
       </table>
@@ -290,16 +292,16 @@ public class ReceiptService
       <div class=""totals"">
         <table>
           <tr>
-            <td class=""tl"">សរុប <span class=""cn"">總計</span> <span class=""en"">TOTAL(USD)</span></td>
+            <td class=""tl"">សរុប <span class=""sl"">/</span> <span class=""cn"">總計</span> <span class=""sl"">/</span> <span class=""en"">TOTAL(USD)</span></td>
             <td class=""tv"">{r.Subtotal.ToString("N2", inv)}</td>
           </tr>
           <tr>
-            <td class=""tl"">បញ្ចុះតម្លៃ <span class=""cn"">折扣</span> <span class=""en"">DISCOUNT(USD)</span></td>
+            <td class=""tl"">បញ្ចុះតម្លៃ <span class=""sl"">/</span> <span class=""cn"">折扣</span> <span class=""sl"">/</span> <span class=""en"">DISCOUNT(USD)</span></td>
             <td class=""tv"">{r.Discount.ToString("N2", inv)}</td>
           </tr>
           {taxRow}
           <tr class=""grand"">
-            <td class=""tl"">ទឹកប្រាក់វិក្កយបត្រ <span class=""cn"">发票金额</span> <span class=""en"">INVOICE AMOUNT(USD)</span></td>
+            <td class=""tl"">ទឹកប្រាក់វិក្កយបត្រ <span class=""sl"">/</span> <span class=""cn"">发票金额</span> <span class=""sl"">/</span> <span class=""en"">INVOICE AMOUNT(USD)</span></td>
             <td class=""tv"">{r.Total.ToString("N2", inv)}</td>
           </tr>
         </table>
@@ -308,11 +310,11 @@ public class ReceiptService
 
     <table class=""pay"">
       <tr>
-        <td>វិធីបង់ប្រាក់ <span class=""en"">PAYMENT METHOD</span></td>
+        <td>វិធីបង់ប្រាក់ <span class=""sl"">/</span> <span class=""cn"">付款方式</span> <span class=""sl"">/</span> <span class=""en"">PAYMENT METHOD</span></td>
         <td class=""pv en"">{Encode(r.PaymentMethod)}</td>
-        <td>ប្រាក់ដែលបានបង់ <span class=""en"">PAID(USD)</span></td>
+        <td>ប្រាក់ដែលបានបង់ <span class=""sl"">/</span> <span class=""cn"">已付</span> <span class=""sl"">/</span> <span class=""en"">PAID(USD)</span></td>
         <td class=""pv"">{r.AmountPaid.ToString("N2", inv)}</td>
-        <td>ប្រាក់ថយវិញ <span class=""en"">CHANGE(USD)</span></td>
+        <td>ប្រាក់ថយវិញ <span class=""sl"">/</span> <span class=""cn"">找零</span> <span class=""sl"">/</span> <span class=""en"">CHANGE(USD)</span></td>
         <td class=""pv"">{change.ToString("N2", inv)}</td>
       </tr>
     </table>
@@ -320,8 +322,8 @@ public class ReceiptService
     {noteBlock}
 
     <div class=""signs"">
-      <div class=""s""><div class=""line""></div>ហត្ថលេខាអ្នកលក់ <span class=""en"">Seller</span></div>
-      <div class=""s""><div class=""line""></div>ហត្ថលេខាអ្នកទិញ <span class=""en"">Customer</span></div>
+      <div class=""s""><div class=""line""></div>ហត្ថលេខាអ្នកលក់ <span class=""sl"">/</span> <span class=""cn"">賣方簽名</span> <span class=""sl"">/</span> <span class=""en"">Seller</span></div>
+      <div class=""s""><div class=""line""></div>ហត្ថលេខាអ្នកទិញ <span class=""sl"">/</span> <span class=""cn"">買方簽名</span> <span class=""sl"">/</span> <span class=""en"">Customer</span></div>
     </div>
   </div>
   <button class=""btn noprint"" onclick=""window.print()"">បោះពុម្ព / Print</button>
