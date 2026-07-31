@@ -802,6 +802,53 @@
 
                             <!-- Left: verify line items -->
                             <StackPanel Grid.Column="0" Spacing="12">
+                                <!-- Customer details: compact and kept above the item list so a
+                                     long list can grow and scroll underneath it.
+                                     Printed on the receipt only - never stored in the database. -->
+                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                        CornerRadius="12" Padding="14,12">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <TextBlock Grid.Column="0" Text="Customer Details" FontSize="14"
+                                                       FontWeight="Bold" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" Margin="10,0,0,0"
+                                                       Text="Optional - receipt only, not saved"
+                                                       FontSize="11" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{StaticResource TextFaint}" />
+                                        </Grid>
+                                        <!-- Name / phone / address on one row keeps this panel short -->
+                                        <Grid ColumnDefinitions="*,150,*" ColumnSpacing="10">
+                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                <TextBlock Classes="fieldLabel" Text="NAME" Margin="0" />
+                                                <TextBox Classes="field" Padding="8,6" FontSize="13"
+                                                         Text="{Binding CustomerName}"
+                                                         PlaceholderText="Walk-in Customer" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Classes="fieldLabel" Text="PHONE" Margin="0" />
+                                                <TextBox Classes="field" Padding="8,6" FontSize="13"
+                                                         Text="{Binding CustomerPhone}"
+                                                         PlaceholderText="optional" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Spacing="2">
+                                                <TextBlock Classes="fieldLabel" Text="ADDRESS" Margin="0" />
+                                                <TextBox Classes="field" Padding="8,6" FontSize="13"
+                                                         Text="{Binding CustomerAddress}"
+                                                         PlaceholderText="optional" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Classes="fieldLabel" Text="ORDER NOTE" Margin="0" />
+                                            <TextBox Classes="field" Padding="8,6" FontSize="13"
+                                                     Text="{Binding OrderNote}"
+                                                     PlaceholderText="Cutting instructions, delivery notes, etc." />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Item list last: it takes the remaining height and scrolls -->
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Grid.Column="0" Text="Review Items" FontFamily="Georgia, serif"
                                                FontSize="18" FontWeight="Bold" VerticalAlignment="Center"
@@ -824,7 +871,7 @@
                                             <TextBlock Grid.Column="3" Classes="th" Text="TOTAL" VerticalAlignment="Center" />
                                         </Grid>
                                         <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" />
-                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" MaxHeight="560">
                                             <ItemsControl ItemsSource="{Binding Cart}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="models:CartLine">
@@ -881,44 +928,6 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Customer details (printed on the receipt only) -->
-                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="18">
-                                    <StackPanel Spacing="12">
-                                        <StackPanel Spacing="2">
-                                            <TextBlock Text="Customer Details" FontFamily="Georgia, serif"
-                                                       FontSize="17" FontWeight="Bold"
-                                                       Foreground="{StaticResource TextPrimary}" />
-                                            <TextBlock Text="Optional. Printed on the receipt only - not stored in the database."
-                                                       FontSize="12" Foreground="{StaticResource TextMuted}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                            <StackPanel Grid.Column="0" Spacing="3">
-                                                <TextBlock Classes="fieldLabel" Text="NAME" />
-                                                <TextBox Classes="field" Text="{Binding CustomerName}"
-                                                         PlaceholderText="Walk-in Customer" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="3">
-                                                <TextBlock Classes="fieldLabel" Text="PHONE" />
-                                                <TextBox Classes="field" Text="{Binding CustomerPhone}"
-                                                         PlaceholderText="optional" />
-                                            </StackPanel>
-                                        </Grid>
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="ADDRESS" />
-                                            <TextBox Classes="field" Text="{Binding CustomerAddress}"
-                                                     PlaceholderText="optional" />
-                                        </StackPanel>
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="ORDER NOTE" />
-                                            <TextBox Classes="field" Text="{Binding OrderNote}"
-                                                     AcceptsReturn="True" Height="64"
-                                                     TextWrapping="Wrap"
-                                                     PlaceholderText="Cutting instructions, delivery notes, etc." />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
                             </StackPanel>
 
                             <!-- Right: payment summary -->
