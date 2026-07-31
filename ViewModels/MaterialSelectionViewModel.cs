@@ -120,6 +120,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         foreach (var category in Categories)
             category.CardWidth = CategoryCardWidth;
+
+        // Cart drawer occupies 3/10 of the window, with a sane minimum.
+        CartDrawerWidth = Math.Max(320d, Math.Floor(width * 0.3d));
     }
 
     public string SectionTitle => ActiveSection switch
@@ -207,14 +210,6 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [ObservableProperty]
     public partial Product? SelectedProduct { get; set; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSelectionTab))]
-    [NotifyPropertyChangedFor(nameof(IsCartTab))]
-    public partial string SelectedTab { get; set; } = "Selection";
-
-    public bool IsSelectionTab => SelectedTab == "Selection";
-    public bool IsCartTab => SelectedTab == "Cart";
-
     [RelayCommand]
     private void SelectCategory(string? categoryName)
     {
@@ -240,19 +235,11 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         };
 
         SelectedProduct = CategoryProducts.FirstOrDefault();
-        SelectedTab = "Selection";
         IsDetailOpen = true;
     }
 
     [RelayCommand]
     private void CloseDetail() => IsDetailOpen = false;
-
-    [RelayCommand]
-    private void SetTab(string? tab)
-    {
-        if (!string.IsNullOrWhiteSpace(tab))
-            SelectedTab = tab!;
-    }
 
     // ==================== Cart ====================
 
@@ -265,10 +252,28 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public partial double CartTotal { get; set; }
 
     [ObservableProperty]
-    public partial string CartTabLabel { get; set; } = "Cart";
-
-    [ObservableProperty]
     public partial bool IsCartEmpty { get; set; } = true;
+
+    /// <summary>Total units in the cart, shown as the sidebar cart badge.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCartBadge))]
+    public partial int CartItemCount { get; set; }
+
+    public bool HasCartBadge => CartItemCount > 0;
+
+    /// <summary>Controls the left slide-in cart drawer.</summary>
+    [ObservableProperty]
+    public partial bool IsCartDrawerOpen { get; set; }
+
+    /// <summary>Cart drawer spans 3/10 of the window width.</summary>
+    [ObservableProperty]
+    public partial double CartDrawerWidth { get; set; } = 360;
+
+    [RelayCommand]
+    private void ToggleCartDrawer() => IsCartDrawerOpen = !IsCartDrawerOpen;
+
+    [RelayCommand]
+    private void CloseCartDrawer() => IsCartDrawerOpen = false;
 
     public string CartTotalLabel => $"${CartTotal:0.00}";
 
@@ -356,7 +361,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (product is null)
             return;
         AddProductToCart(product);
-        SelectedTab = "Cart";
+
+        // The cart now lives in the left drawer, so surface it there.
+        IsDetailOpen = false;
+        IsCartDrawerOpen = true;
     }
 
     [RelayCommand]
@@ -462,8 +470,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
                 CategoryProducts.Add(p);
         }
 
-        SelectedTab = "Selection";
         IsDetailOpen = false;
+        IsCartDrawerOpen = false;
         ActiveSection = "Orders";
         DetailSubtitle = $"Sale #{saleId:0000} complete: {itemCount} item(s), ${total:0.00}. Receipt printed.";
     }
@@ -472,7 +480,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         CartTotal = Cart.Sum(c => c.LineTotal);
         var count = Cart.Sum(c => c.Quantity);
-        CartTabLabel = count > 0 ? $"Cart ({count})" : "Cart";
+        CartItemCount = count;
         IsCartEmpty = Cart.Count == 0;
         OnPropertyChanged(nameof(ChangeLabel));
         CheckoutCommand.NotifyCanExecuteChanged();

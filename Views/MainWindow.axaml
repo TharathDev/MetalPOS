@@ -33,9 +33,6 @@
         <SolidColorBrush x:Key="LavenderPill" Color="#ECEBFB" />
         <SolidColorBrush x:Key="LavenderText" Color="#5B54C9" />
 
-        <!-- Active-tab background/foreground (compares SelectedTab to the tab name) -->
-        <conv:EqualityToBrushConverter x:Key="TabBg" TrueBrush="#C2410C" FalseBrush="Transparent" />
-        <conv:EqualityToBrushConverter x:Key="TabFg" TrueBrush="White" FalseBrush="#6B7280" />
         <!-- Selected dimension row highlight (compares ListBoxItem.IsSelected to True) -->
         <conv:EqualityToBrushConverter x:Key="RowBg" TrueBrush="#FDF3EE" FalseBrush="White" />
         <conv:EqualityToBrushConverter x:Key="RowBorder" TrueBrush="#C2410C" FalseBrush="#E5E7EB" />
@@ -222,6 +219,19 @@
             <Setter Property="RenderTransform" Value="translateX(0)" />
         </Style>
 
+        <!-- Cart drawer slides in from the left -->
+        <Style Selector="Border.drawerLeft">
+            <Setter Property="RenderTransform" Value="translateX(-640px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.drawerLeft.open">
+            <Setter Property="RenderTransform" Value="translateX(0)" />
+        </Style>
+
         <!-- Small per-row ADD TO CART button -->
         <Style Selector="Button.rowAdd">
             <Setter Property="Background" Value="{StaticResource Accent}" />
@@ -355,21 +365,25 @@
                                Foreground="{StaticResource TextFaint}" />
                 </StackPanel>
 
-                <!-- Bottom block: divider, settings, new sale -->
+                <!-- Bottom block: cart button with live item-count badge -->
                 <StackPanel DockPanel.Dock="Bottom" Spacing="12">
                     <Border Height="1" Background="{StaticResource HairLine}" Margin="0,0,0,4" />
-                    <Button Classes="nav" Command="{Binding SelectSectionCommand}" CommandParameter="Settings">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Path Classes="icon" Width="19" Height="19"
-                                  Data="M12 8 a4 4 0 1 0 0.01 0 M12 3 V6 M12 18 V21 M3 12 H6 M18 12 H21 M5.6 5.6 L7.7 7.7 M16.3 16.3 L18.4 18.4 M18.4 5.6 L16.3 7.7 M7.7 16.3 L5.6 18.4" />
-                            <TextBlock Text="Settings" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="accent" Command="{Binding NewSaleCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                            <Path Classes="icon" Width="18" Height="18" Stroke="White" Data="M12 5 V19 M5 12 H19" />
-                            <TextBlock Classes="mono" Text="NEW SALE" FontWeight="Bold" VerticalAlignment="Center" />
-                        </StackPanel>
+                    <Button Classes="accent" Command="{Binding ToggleCartDrawerCommand}"
+                            ToolTip.Tip="View cart and check out">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Path Grid.Column="0" Classes="icon" Width="18" Height="18" Stroke="White"
+                                  Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                            <TextBlock Grid.Column="1" Classes="mono" Text="CART" FontWeight="Bold"
+                                       VerticalAlignment="Center" Margin="10,0,0,0" />
+                            <!-- Badge showing the number of items currently in the cart -->
+                            <Border Grid.Column="2" MinWidth="22" Height="22" CornerRadius="11"
+                                    Background="White" IsVisible="{Binding HasCartBadge}"
+                                    VerticalAlignment="Center" Padding="6,0">
+                                <TextBlock Text="{Binding CartItemCount}" Classes="mono" FontSize="11"
+                                           FontWeight="Bold" Foreground="{StaticResource Accent}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
                     </Button>
                 </StackPanel>
 
@@ -826,62 +840,36 @@
                         </Button>
                     </Grid>
 
-                    <!-- Tabs -->
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto" Margin="24,18,24,0" ColumnSpacing="10">
-                        <Panel Grid.Column="0">
-                            <Border CornerRadius="0"
-                                    Background="{Binding SelectedTab, Converter={StaticResource TabBg}, ConverterParameter=Selection}" />
-                            <Button Classes="bare" Command="{Binding SetTabCommand}" CommandParameter="Selection"
-                                    Padding="18,10">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Path Classes="icon" Width="15" Height="15"
-                                          Stroke="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Selection}"
-                                          Data="M5 12 L10 17 L19 7" />
-                                    <TextBlock Classes="mono" Text="Selection" FontWeight="SemiBold" VerticalAlignment="Center"
-                                               Foreground="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Selection}" />
-                                </StackPanel>
-                            </Button>
-                        </Panel>
-                        <Panel Grid.Column="1">
-                            <Border CornerRadius="0"
-                                    Background="{Binding SelectedTab, Converter={StaticResource TabBg}, ConverterParameter=Cart}" />
-                            <Button Classes="bare" Command="{Binding SetTabCommand}" CommandParameter="Cart"
-                                    Padding="18,10">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Path Classes="icon" Width="15" Height="15"
-                                          Stroke="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Cart}"
-                                          Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
-                                    <TextBlock Classes="mono" Text="{Binding CartTabLabel}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                               Foreground="{Binding SelectedTab, Converter={StaticResource TabFg}, ConverterParameter=Cart}" />
-                                </StackPanel>
-                            </Button>
-                        </Panel>
-                    </Grid>
+                    <!-- Section label (the cart itself now lives in the left drawer) -->
+                    <Border DockPanel.Dock="Top" Margin="24,18,24,0"
+                            Background="{StaticResource Accent}" HorizontalAlignment="Left" Padding="18,10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Classes="icon" Width="15" Height="15" Stroke="White"
+                                  Data="M5 12 L10 17 L19 7" />
+                            <TextBlock Classes="mono" Text="Selection" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" Foreground="White" />
+                        </StackPanel>
+                    </Border>
 
                     <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" Margin="0,16,0,0" />
 
                     <!-- Bottom action bar -->
                     <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
                             Padding="24,16">
-                        <Panel>
-                            <Button Classes="accent" CornerRadius="0" IsVisible="{Binding IsSelectionTab}"
-                                    HorizontalAlignment="Stretch" Command="{Binding AddSelectedToCartCommand}">
-                                <TextBlock Text="Add to Cart" FontWeight="Bold" />
-                            </Button>
-                            <Button Classes="accent" CornerRadius="0" IsVisible="{Binding IsCartTab}"
-                                    HorizontalAlignment="Stretch" Command="{Binding CheckoutCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                    <TextBlock Text="Checkout" FontWeight="Bold" />
-                                    <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />
-                                </StackPanel>
-                            </Button>
-                        </Panel>
+                        <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                                Command="{Binding AddSelectedToCartCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                      Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                                <TextBlock Text="Add to Cart" FontWeight="Bold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </Border>
 
                     <!-- Body -->
                     <Grid Margin="24,18,24,0">
-                        <!-- Selection tab -->
-                        <ScrollViewer IsVisible="{Binding IsSelectionTab}" HorizontalScrollBarVisibility="Disabled">
+                        <!-- Product selection list -->
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                             <StackPanel>
                                 <ListBox Classes="dims" ItemsSource="{Binding CategoryProducts}"
                                          SelectedItem="{Binding SelectedProduct}">
@@ -965,103 +953,6 @@
                                 </Button>
                             </StackPanel>
                         </ScrollViewer>
-
-                        <!-- Cart tab -->
-                        <DockPanel IsVisible="{Binding IsCartTab}">
-                            <TextBlock DockPanel.Dock="Top" IsVisible="{Binding IsCartEmpty}"
-                                       Text="Your cart is empty. Add items from the Selection tab."
-                                       FontSize="13" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
-                                       Margin="2,4,0,0" />
-
-                            <!-- Payment panel pinned to the bottom of the cart tab -->
-                            <Border DockPanel.Dock="Bottom" IsVisible="{Binding !IsCartEmpty}"
-                                    Background="#FAFAFA" CornerRadius="10" Padding="14" Margin="0,10,0,4">
-                                <StackPanel Spacing="8">
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                        <StackPanel Grid.Column="0" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="PAYMENT METHOD" />
-                                            <ComboBox Classes="field" ItemsSource="{Binding PaymentMethods}"
-                                                      SelectedItem="{Binding PaymentMethod}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Classes="fieldLabel" Text="AMOUNT PAID" />
-                                            <TextBox Classes="field" Text="{Binding AmountPaidText}"
-                                                     PlaceholderText="exact" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Grid.Column="0" Text="Total" FontSize="14"
-                                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding CartTotalLabel}" FontSize="18"
-                                                   FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
-                                    </Grid>
-                                    <TextBlock Text="{Binding ChangeLabel}" FontSize="13" FontWeight="SemiBold"
-                                               HorizontalAlignment="Right" Foreground="{StaticResource Accent}" />
-                                </StackPanel>
-                            </Border>
-
-                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding Cart}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:CartLine">
-                                            <Border CornerRadius="0" BorderBrush="{StaticResource HairLine}"
-                                                    BorderThickness="1" Padding="12" Margin="0,0,0,12">
-                                                <StackPanel Spacing="10">
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Material}" FontSize="14"
-                                                                       FontWeight="SemiBold"
-                                                                       Foreground="{StaticResource TextPrimary}"
-                                                                       TextWrapping="Wrap" />
-                                                            <TextBlock Text="{Binding DimensionDisplay}" FontSize="12"
-                                                                       Foreground="{StaticResource TextMuted}" />
-                                                        </StackPanel>
-                                                        <Button Grid.Column="1" Classes="bare" Width="26" Height="26"
-                                                                VerticalAlignment="Top"
-                                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).RemoveLineCommand}"
-                                                                CommandParameter="{Binding}">
-                                                            <Path Classes="icon" Width="15" Height="15"
-                                                                  Stroke="{StaticResource Danger}"
-                                                                  Data="M6 6 L18 18 M18 6 L6 18" />
-                                                        </Button>
-                                                    </Grid>
-                                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                        <!-- Quantity stepper + editable qty -->
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center">
-                                                            <Button Classes="bare" Width="26" Height="26"
-                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).DecrementLineCommand}"
-                                                                    CommandParameter="{Binding}">
-                                                                <Path Classes="icon" Width="14" Height="14" Data="M5 12 H19" />
-                                                            </Button>
-                                                            <TextBox Classes="field" Width="46" Padding="6,6"
-                                                                     TextAlignment="Center"
-                                                                     Text="{Binding Quantity}" />
-                                                            <Button Classes="bare" Width="26" Height="26"
-                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).IncrementLineCommand}"
-                                                                    CommandParameter="{Binding}">
-                                                                <Path Classes="icon" Width="14" Height="14" Data="M12 5 V19 M5 12 H19" />
-                                                            </Button>
-                                                        </StackPanel>
-                                                        <!-- Editable unit price -->
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center">
-                                                            <TextBlock Text="@ $" VerticalAlignment="Center" FontSize="13"
-                                                                       Foreground="{StaticResource TextMuted}" />
-                                                            <TextBox Classes="field" Width="80" Padding="6,6"
-                                                                     Text="{Binding UnitPrice}" />
-                                                        </StackPanel>
-                                                        <TextBlock Grid.Column="2" Text="{Binding LineTotalLabel}"
-                                                                   FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
-                                                                   Foreground="{StaticResource TextPrimary}" />
-                                                    </Grid>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
                     </Grid>
                 </DockPanel>
             </Border>
@@ -1154,6 +1045,156 @@
                             </Grid>
                         </StackPanel>
                     </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Panel>
+
+        <!-- ===== Left drawer: Cart + Checkout (3/10 of the window width) ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsCartDrawerOpen}"
+               ClipToBounds="True">
+            <!-- Scrim (click to close) -->
+            <Button Classes="scrim" Classes.open="{Binding IsCartDrawerOpen}"
+                    Command="{Binding CloseCartDrawerCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <Border Classes="drawerLeft" Classes.open="{Binding IsCartDrawerOpen}"
+                    Width="{Binding CartDrawerWidth}" HorizontalAlignment="Left" Background="White"
+                    BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0"
+                    BoxShadow="8 0 30 0 #1A000000">
+                <DockPanel>
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="22,22,18,0">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="mono" Text="CURRENT SALE" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <TextBlock Text="Cart" FontFamily="Georgia, serif" FontSize="22"
+                                       FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
+                                Command="{Binding CloseCartDrawerCommand}" Width="30" Height="30">
+                            <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
+                        </Button>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}"
+                            Margin="0,16,0,0" />
+
+                    <!-- Payment + checkout pinned to the bottom -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}"
+                            BorderThickness="0,1,0,0" Padding="22,16"
+                            IsVisible="{Binding !IsCartEmpty}">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="PAYMENT METHOD" />
+                                    <ComboBox Classes="field" ItemsSource="{Binding PaymentMethods}"
+                                              SelectedItem="{Binding PaymentMethod}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Classes="fieldLabel" Text="AMOUNT PAID" />
+                                    <TextBox Classes="field" Text="{Binding AmountPaidText}"
+                                             PlaceholderText="exact" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="Total" FontSize="14"
+                                           Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding CartTotalLabel}" FontSize="20"
+                                           FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                            </Grid>
+                            <TextBlock Text="{Binding ChangeLabel}" FontSize="13" FontWeight="SemiBold"
+                                       HorizontalAlignment="Right" Foreground="{StaticResource Accent}" />
+                            <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                                    Padding="12,13" Command="{Binding CheckoutCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <TextBlock Text="Checkout" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                    Command="{Binding NewSaleCommand}" Content="Clear Cart" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cart lines -->
+                    <Grid Margin="22,16,22,0">
+                        <!-- Empty state -->
+                        <StackPanel IsVisible="{Binding IsCartEmpty}" VerticalAlignment="Center"
+                                    HorizontalAlignment="Center" Spacing="12">
+                            <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource ChipBg}">
+                                <Path Classes="icon" Width="24" Height="24"
+                                      Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                            </Border>
+                            <TextBlock Text="Your cart is empty" FontSize="14" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Text="Pick a category, then add items to start a sale."
+                                       FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="220"
+                                       Foreground="{StaticResource TextMuted}" />
+                        </StackPanel>
+
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding !IsCartEmpty}">
+                            <ItemsControl ItemsSource="{Binding Cart}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CartLine">
+                                        <Border CornerRadius="0" BorderBrush="{StaticResource HairLine}"
+                                                BorderThickness="1" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel Spacing="10">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Material}" FontSize="14"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource TextPrimary}"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding DimensionDisplay}" FontSize="12"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Classes="bare" Width="26" Height="26"
+                                                            VerticalAlignment="Top"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).RemoveLineCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Path Classes="icon" Width="15" Height="15"
+                                                              Stroke="{StaticResource Danger}"
+                                                              Data="M6 6 L18 18 M18 6 L6 18" />
+                                                    </Button>
+                                                </Grid>
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                    <!-- Quantity stepper -->
+                                                    <Border Grid.Column="0" BorderThickness="1"
+                                                            BorderBrush="{StaticResource Accent}"
+                                                            VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Button Classes="qtyStep" Content="−"
+                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).DecrementLineCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <TextBlock Text="{Binding Quantity}" Classes="mono"
+                                                                       Width="30" FontSize="13" FontWeight="Bold"
+                                                                       TextAlignment="Center" VerticalAlignment="Center"
+                                                                       Foreground="{StaticResource TextPrimary}" />
+                                                            <Button Classes="qtyStep" Content="+"
+                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).IncrementLineCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <!-- Editable unit price -->
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="@ $" VerticalAlignment="Center" FontSize="13"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                        <TextBox Classes="field" Width="74" Padding="6,6"
+                                                                 Text="{Binding UnitPrice}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding LineTotalLabel}"
+                                                               FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextPrimary}" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Panel>
