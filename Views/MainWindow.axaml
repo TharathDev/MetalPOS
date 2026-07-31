@@ -700,6 +700,218 @@
 
                         </StackPanel>
 
+                        <!-- ============ CHECKOUT SECTION ============ -->
+                        <Grid IsVisible="{Binding IsCheckoutSection}" Margin="0,22,0,0"
+                              ColumnDefinitions="*,360" ColumnSpacing="20">
+
+                            <!-- Left: verify line items -->
+                            <StackPanel Grid.Column="0" Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="Review Items" FontFamily="Georgia, serif"
+                                               FontSize="18" FontWeight="Bold" VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextPrimary}" />
+                                    <Button Grid.Column="1" Classes="ghost" Command="{Binding BackToShoppingCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon" Width="15" Height="15" Data="M15 6 L9 12 L15 18" />
+                                            <TextBlock Text="Continue Shopping" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,132,120,96"
+                                              Background="#FAFAFA" Height="40">
+                                            <TextBlock Classes="th" Text="ITEM" VerticalAlignment="Center" Margin="14,0,0,0" />
+                                            <TextBlock Grid.Column="1" Classes="th" Text="QTY" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Classes="th" Text="UNIT PRICE" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="3" Classes="th" Text="TOTAL" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" />
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
+                                            <ItemsControl ItemsSource="{Binding Cart}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:CartLine">
+                                                        <Border BorderBrush="{StaticResource HairLine}"
+                                                                BorderThickness="0,0,0,1" Padding="14,12">
+                                                            <Grid ColumnDefinitions="*,132,120,96" VerticalAlignment="Center">
+                                                                <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,10,0">
+                                                                    <TextBlock Text="{Binding Material}" FontSize="13"
+                                                                               FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                               Foreground="{StaticResource TextPrimary}" />
+                                                                    <TextBlock Text="{Binding DimensionDisplay}" FontSize="12"
+                                                                               Foreground="{StaticResource TextMuted}" />
+                                                                </StackPanel>
+
+                                                                <!-- Adjust quantity -->
+                                                                <Border Grid.Column="1" BorderThickness="1"
+                                                                        BorderBrush="{StaticResource Accent}"
+                                                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <Button Classes="qtyStep" Content="−"
+                                                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).DecrementLineCommand}"
+                                                                                CommandParameter="{Binding}" />
+                                                                        <TextBlock Text="{Binding Quantity}" Classes="mono"
+                                                                                   Width="30" FontSize="13" FontWeight="Bold"
+                                                                                   TextAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                                        <Button Classes="qtyStep" Content="+"
+                                                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).IncrementLineCommand}"
+                                                                                CommandParameter="{Binding}" />
+                                                                    </StackPanel>
+                                                                </Border>
+
+                                                                <!-- Adjust unit price -->
+                                                                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                                                            Spacing="5" VerticalAlignment="Center">
+                                                                    <TextBlock Text="$" FontSize="13"
+                                                                               VerticalAlignment="Center"
+                                                                               Foreground="{StaticResource TextMuted}" />
+                                                                    <TextBox Classes="field" Width="80" Padding="6,6"
+                                                                             Text="{Binding UnitPrice}" />
+                                                                </StackPanel>
+
+                                                                <TextBlock Grid.Column="3" Text="{Binding LineTotalLabel}"
+                                                                           FontSize="14" FontWeight="Bold"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{StaticResource TextPrimary}" />
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Customer details (printed on the receipt only) -->
+                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                        CornerRadius="12" Padding="18">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Customer Details" FontFamily="Georgia, serif"
+                                                       FontSize="17" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}" />
+                                            <TextBlock Text="Optional. Printed on the receipt only - not stored in the database."
+                                                       FontSize="12" Foreground="{StaticResource TextMuted}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <StackPanel Grid.Column="0" Spacing="3">
+                                                <TextBlock Classes="fieldLabel" Text="NAME" />
+                                                <TextBox Classes="field" Text="{Binding CustomerName}"
+                                                         PlaceholderText="Walk-in Customer" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="3">
+                                                <TextBlock Classes="fieldLabel" Text="PHONE" />
+                                                <TextBox Classes="field" Text="{Binding CustomerPhone}"
+                                                         PlaceholderText="optional" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Classes="fieldLabel" Text="ADDRESS" />
+                                            <TextBox Classes="field" Text="{Binding CustomerAddress}"
+                                                     PlaceholderText="optional" />
+                                        </StackPanel>
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Classes="fieldLabel" Text="ORDER NOTE" />
+                                            <TextBox Classes="field" Text="{Binding OrderNote}"
+                                                     AcceptsReturn="True" Height="64"
+                                                     TextWrapping="Wrap"
+                                                     PlaceholderText="Cutting instructions, delivery notes, etc." />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Right: payment summary -->
+                            <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                    CornerRadius="12" Padding="18" VerticalAlignment="Top">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Payment Summary" FontFamily="Georgia, serif" FontSize="18"
+                                               FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Subtotal" FontSize="13"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SubtotalLabel}" FontSize="13"
+                                                   FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <TextBlock Classes="fieldLabel" Text="DISCOUNT ($)" />
+                                            <TextBox Classes="field" Text="{Binding DiscountText}" PlaceholderText="0.00" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Classes="fieldLabel" Text="TAX (%)" />
+                                            <TextBox Classes="field" Text="{Binding TaxRateText}" PlaceholderText="0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Border Height="1" Background="{StaticResource HairLine}" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Discount" FontSize="13"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DiscountLabel}" FontSize="13"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Tax" FontSize="13"
+                                                   Foreground="{StaticResource TextMuted}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TaxLabel}" FontSize="13"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </Grid>
+
+                                    <Border Height="2" Background="{StaticResource TextPrimary}" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="TOTAL" Classes="mono" FontSize="13"
+                                                   FontWeight="Bold" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding GrandTotalLabel}" FontSize="24"
+                                                   FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                                    </Grid>
+
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Classes="fieldLabel" Text="PAYMENT METHOD" />
+                                        <ComboBox Classes="field" ItemsSource="{Binding PaymentMethods}"
+                                                  SelectedItem="{Binding PaymentMethod}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Classes="fieldLabel" Text="AMOUNT PAID" />
+                                        <TextBox Classes="field" Text="{Binding AmountPaidText}"
+                                                 PlaceholderText="exact amount" />
+                                    </StackPanel>
+
+                                    <Border Background="{StaticResource ChipBg}" CornerRadius="8" Padding="12,10">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0" Text="Change due" FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding ChangeLabel}" FontSize="15"
+                                                       FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                                            Padding="12,14" Command="{Binding CompleteSaleCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                            <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                                  Data="M5 12 L10 17 L19 7" />
+                                            <TextBlock Text="Complete Sale &amp; Print" FontWeight="Bold"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <TextBlock Text="{Binding CheckoutStatus}" FontSize="12" TextWrapping="Wrap"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{StaticResource Danger}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
                         <!-- ============ ORDERS / HISTORY SECTION ============ -->
                         <StackPanel IsVisible="{Binding IsOrdersSection}" Margin="0,22,0,0" Spacing="12">
                             <Border Background="{StaticResource ChipBg}" CornerRadius="10" Padding="16,12">
@@ -1105,7 +1317,7 @@
                             <TextBlock Text="{Binding ChangeLabel}" FontSize="13" FontWeight="SemiBold"
                                        HorizontalAlignment="Right" Foreground="{StaticResource Accent}" />
                             <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
-                                    Padding="12,13" Command="{Binding CheckoutCommand}">
+                                    Padding="12,13" Command="{Binding GoToCheckoutCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                     <TextBlock Text="Checkout" FontWeight="Bold" />
                                     <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />

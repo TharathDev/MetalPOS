@@ -84,6 +84,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsInventorySection))]
     [NotifyPropertyChangedFor(nameof(IsStockSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
+    [NotifyPropertyChangedFor(nameof(IsCheckoutSection))]
     [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
     [NotifyPropertyChangedFor(nameof(SectionTitle))]
     [NotifyPropertyChangedFor(nameof(SectionSubtitle))]
@@ -92,6 +93,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsInventorySection => ActiveSection == "Inventory";
     public bool IsStockSection => ActiveSection == "Stock";
     public bool IsOrdersSection => ActiveSection is "Orders" or "Reports";
+    public bool IsCheckoutSection => ActiveSection == "Checkout";
 
     [ObservableProperty]
     public partial int CategoryColumns { get; set; } = 3;
@@ -129,6 +131,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         "Stock" => "Stock Management",
         "Orders" or "Reports" => "Orders & History",
+        "Checkout" => "Checkout",
         _ => "Material Selection",
     };
 
@@ -136,6 +139,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         "Stock" => "Insert, update, or delete inventory items and create custom metal objects.",
         "Orders" or "Reports" => "Review completed sales and reprint receipts.",
+        "Checkout" => "Verify quantities and pricing, add customer details, then complete the sale.",
         _ => "Select a category to view specific stock dimensions and pricing.",
     };
 
@@ -247,8 +251,16 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CartTotalLabel))]
+    [NotifyPropertyChangedFor(nameof(SubtotalLabel))]
+    [NotifyPropertyChangedFor(nameof(DiscountAmount))]
+    [NotifyPropertyChangedFor(nameof(DiscountLabel))]
+    [NotifyPropertyChangedFor(nameof(TaxAmount))]
+    [NotifyPropertyChangedFor(nameof(TaxLabel))]
+    [NotifyPropertyChangedFor(nameof(GrandTotal))]
+    [NotifyPropertyChangedFor(nameof(GrandTotalLabel))]
     [NotifyPropertyChangedFor(nameof(ChangeLabel))]
-    [NotifyCanExecuteChangedFor(nameof(CheckoutCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GoToCheckoutCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompleteSaleCommand))]
     public partial double CartTotal { get; set; }
 
     [ObservableProperty]
@@ -286,14 +298,87 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ChangeLabel))]
     public partial string AmountPaidText { get; set; } = string.Empty;
 
+    // ==================== Checkout screen ====================
+
+    // Customer details are printed on the receipt only - never stored in the database.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomerSummary))]
+    public partial string CustomerName { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CustomerPhone { get; set; } = string.Empty;
+    [ObservableProperty] public partial string CustomerAddress { get; set; } = string.Empty;
+
+    /// <summary>Free-text note printed on the receipt (e.g. cut-to-size instructions).</summary>
+    [ObservableProperty] public partial string OrderNote { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DiscountAmount))]
+    [NotifyPropertyChangedFor(nameof(DiscountLabel))]
+    [NotifyPropertyChangedFor(nameof(TaxAmount))]
+    [NotifyPropertyChangedFor(nameof(TaxLabel))]
+    [NotifyPropertyChangedFor(nameof(GrandTotal))]
+    [NotifyPropertyChangedFor(nameof(GrandTotalLabel))]
+    [NotifyPropertyChangedFor(nameof(ChangeLabel))]
+    public partial string DiscountText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TaxAmount))]
+    [NotifyPropertyChangedFor(nameof(TaxLabel))]
+    [NotifyPropertyChangedFor(nameof(GrandTotal))]
+    [NotifyPropertyChangedFor(nameof(GrandTotalLabel))]
+    [NotifyPropertyChangedFor(nameof(ChangeLabel))]
+    public partial string TaxRateText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CheckoutStatus { get; set; } = string.Empty;
+
+    /// <summary>Sum of all cart lines before discount and tax.</summary>
+    public double Subtotal => CartTotal;
+    public string SubtotalLabel => $"${Subtotal:0.00}";
+
+    /// <summary>Flat discount amount, clamped to the subtotal.</summary>
+    public double DiscountAmount => Math.Clamp(ParseDouble(DiscountText, 0), 0, Subtotal);
+    public string DiscountLabel => $"-${DiscountAmount:0.00}";
+
+    public double TaxRate => Math.Max(0, ParseDouble(TaxRateText, 0));
+    public double TaxAmount => (Subtotal - DiscountAmount) * TaxRate / 100d;
+    public string TaxLabel => $"${TaxAmount:0.00}";
+
+    /// <summary>Final payable amount: subtotal - discount + tax.</summary>
+    public double GrandTotal => Math.Max(0, Subtotal - DiscountAmount + TaxAmount);
+    public string GrandTotalLabel => $"${GrandTotal:0.00}";
+
     public string ChangeLabel
     {
         get
         {
-            var paid = ParseDouble(AmountPaidText, CartTotal);
-            var change = paid - CartTotal;
+            var paid = ParseDouble(AmountPaidText, GrandTotal);
+            var change = paid - GrandTotal;
             return change < 0 ? $"Due ${-change:0.00}" : $"Change ${change:0.00}";
         }
+    }
+
+    /// <summary>Customer summary line for the receipt; falls back to a walk-in label.</summary>
+    public string CustomerSummary =>
+        string.IsNullOrWhiteSpace(CustomerName) ? "Walk-in Customer" : CustomerName.Trim();
+
+    /// <summary>Navigates to the focused checkout screen without completing the sale.</summary>
+    [RelayCommand(CanExecute = nameof(HasCartItems))]
+    private void GoToCheckout()
+    {
+        if (Cart.Count == 0)
+            return;
+        IsCartDrawerOpen = false;
+        IsDetailOpen = false;
+        ActiveSection = "Checkout";
+        CheckoutStatus = string.Empty;
+    }
+
+    /// <summary>Returns from checkout to browsing inventory.</summary>
+    [RelayCommand]
+    private void BackToShopping()
+    {
+        ActiveSection = "Inventory";
+        LoadCategories();
     }
 
     [RelayCommand]
@@ -414,15 +499,27 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     private bool HasCartItems() => Cart.Count > 0;
 
+    /// <summary>
+    /// Finalizes the sale from the checkout screen: records it, decrements stock,
+    /// prints the receipt (including the non-persisted customer details), then
+    /// resets the cart and checkout fields.
+    /// </summary>
     [RelayCommand(CanExecute = nameof(HasCartItems))]
-    private void Checkout()
+    private void CompleteSale()
     {
         if (Cart.Count == 0)
             return;
 
+        var paid = ParseDouble(AmountPaidText, GrandTotal);
+        if (paid + 0.0001 < GrandTotal)
+        {
+            CheckoutStatus = $"Amount paid is short by ${GrandTotal - paid:0.00}.";
+            return;
+        }
+
         var timestamp = DateTime.Now;
         var lines = Cart.ToList();
-        var total = CartTotal;
+        var total = GrandTotal;
 
         var sale = new Sale
         {
@@ -439,10 +536,25 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
         long saleId = _db.RecordSale(sale);
 
-        var paid = ParseDouble(AmountPaidText, total);
         try
         {
-            _receipt.GenerateAndPrint(saleId, timestamp, lines, total, PaymentMethod, paid);
+            _receipt.GenerateAndPrint(new ReceiptRequest
+            {
+                SaleId = saleId,
+                Timestamp = timestamp,
+                Lines = lines,
+                Subtotal = Subtotal,
+                Discount = DiscountAmount,
+                TaxRate = TaxRate,
+                Tax = TaxAmount,
+                Total = total,
+                PaymentMethod = PaymentMethod,
+                AmountPaid = paid,
+                CustomerName = CustomerSummary,
+                CustomerPhone = CustomerPhone?.Trim() ?? string.Empty,
+                CustomerAddress = CustomerAddress?.Trim() ?? string.Empty,
+                Note = OrderNote?.Trim() ?? string.Empty,
+            });
         }
         catch
         {
@@ -454,7 +566,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         foreach (var product in CategoryProducts)
             product.CartQuantity = 0;
         Cart.Clear();
-        AmountPaidText = string.Empty;
+        ResetCheckoutFields();
         RecalculateCart();
 
         // Refresh stock-derived views.
@@ -476,14 +588,35 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         DetailSubtitle = $"Sale #{saleId:0000} complete: {itemCount} item(s), ${total:0.00}. Receipt printed.";
     }
 
+    private void ResetCheckoutFields()
+    {
+        AmountPaidText = string.Empty;
+        DiscountText = string.Empty;
+        TaxRateText = string.Empty;
+        CustomerName = string.Empty;
+        CustomerPhone = string.Empty;
+        CustomerAddress = string.Empty;
+        OrderNote = string.Empty;
+        CheckoutStatus = string.Empty;
+    }
+
     private void RecalculateCart()
     {
         CartTotal = Cart.Sum(c => c.LineTotal);
         var count = Cart.Sum(c => c.Quantity);
         CartItemCount = count;
         IsCartEmpty = Cart.Count == 0;
+        OnPropertyChanged(nameof(Subtotal));
+        OnPropertyChanged(nameof(SubtotalLabel));
+        OnPropertyChanged(nameof(DiscountAmount));
+        OnPropertyChanged(nameof(DiscountLabel));
+        OnPropertyChanged(nameof(TaxAmount));
+        OnPropertyChanged(nameof(TaxLabel));
+        OnPropertyChanged(nameof(GrandTotal));
+        OnPropertyChanged(nameof(GrandTotalLabel));
         OnPropertyChanged(nameof(ChangeLabel));
-        CheckoutCommand.NotifyCanExecuteChanged();
+        GoToCheckoutCommand.NotifyCanExecuteChanged();
+        CompleteSaleCommand.NotifyCanExecuteChanged();
     }
 
     // ==================== Stock management (CRUD) ====================
@@ -676,8 +809,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         foreach (var product in CategoryProducts)
             product.CartQuantity = 0;
         Cart.Clear();
-        AmountPaidText = string.Empty;
+        ResetCheckoutFields();
         RecalculateCart();
+        IsCartDrawerOpen = false;
         ActiveSection = "Inventory";
         DetailSubtitle = "New sale started - pick a material category.";
     }
