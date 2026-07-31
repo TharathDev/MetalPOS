@@ -364,9 +364,16 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Customer summary line for the receipt; falls back to a walk-in label.</summary>
+    /// <summary>Customer summary line for the app UI; falls back to a walk-in label.</summary>
     public string CustomerSummary =>
         string.IsNullOrWhiteSpace(CustomerName) ? "Walk-in Customer" : CustomerName.Trim();
+
+    /// <summary>
+    /// Customer name as printed on the receipt. The receipt is Khmer-only, so an
+    /// unnamed walk-in falls back to the Khmer equivalent.
+    /// </summary>
+    private string ReceiptCustomerName =>
+        string.IsNullOrWhiteSpace(CustomerName) ? "អតិថិជនទូទៅ" : CustomerName.Trim();
 
     /// <summary>Navigates to the focused checkout screen without completing the sale.</summary>
     [RelayCommand(CanExecute = nameof(HasCartItems))]
@@ -608,10 +615,13 @@ public partial class MaterialSelectionViewModel : ViewModelBase
                 Total = total,
                 PaymentMethod = PaymentMethod,
                 AmountPaid = paid,
-                CustomerName = CustomerSummary,
+                CustomerName = ReceiptCustomerName,
                 CustomerPhone = CustomerPhone?.Trim() ?? string.Empty,
                 CustomerAddress = CustomerAddress?.Trim() ?? string.Empty,
                 Note = OrderNote?.Trim() ?? string.Empty,
+                // Walk-in shop: delivery defaults to the customer's own details.
+                DeliveryAddress = CustomerAddress?.Trim() ?? string.Empty,
+                DeliveryContact = CustomerPhone?.Trim() ?? string.Empty,
             });
         }
         catch
