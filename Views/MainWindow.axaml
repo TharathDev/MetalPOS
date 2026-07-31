@@ -36,6 +36,52 @@
         <!-- Selected dimension row highlight (compares ListBoxItem.IsSelected to True) -->
         <conv:EqualityToBrushConverter x:Key="RowBg" TrueBrush="#FDF3EE" FalseBrush="White" />
         <conv:EqualityToBrushConverter x:Key="RowBorder" TrueBrush="#C2410C" FalseBrush="#E5E7EB" />
+
+        <!-- ===== Input chrome overrides =====
+             The stock Fluent theme fills text inputs with a grey wash and uses a
+             thick blue focus underline. These keep inputs flat white with square
+             corners and an accent focus border, matching the rest of the UI. -->
+        <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+
+        <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F3F4F6" />
+
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#D1D5DB" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#C2410C" />
+        <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#E5E7EB" />
+
+        <SolidColorBrush x:Key="TextControlForeground" Color="#1F2937" />
+        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#1F2937" />
+        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#1F2937" />
+
+        <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#B6BCC6" />
+
+        <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#C2410C" />
+        <!-- Fluent thickens the bottom edge on focus; keep it an even 1px box. -->
+        <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
+        <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
+
+        <!-- ComboBox chrome -->
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#FAFAFA" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#D1D5DB" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#C2410C" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#C2410C" />
+        <SolidColorBrush x:Key="ComboBoxForeground" Color="#1F2937" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#FDF3EE" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#FBE3D3" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#1F2937" />
     </Window.Resources>
 
     <!-- ================= Styles ================= -->
@@ -86,16 +132,28 @@
         </Style>
 
         <!-- Accent (primary) buttons -->
-        <Style Selector="Button.accent">
+        <Style Selector="Button.primary">
             <Setter Property="Background" Value="{StaticResource Accent}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="16,14" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <!-- Pin the chrome for every state so no theme variant can recolor it. -->
+        <Style Selector="Button.primary /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="TextBlock.Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{StaticResource AccentDark}" />
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+        </Style>
+        <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#E3B9A6" />
         </Style>
 
         <!-- ===== Smooth interactions: fade hover colors, subtle press + card lift ===== -->
@@ -109,7 +167,7 @@
             </Setter>
         </Style>
         <!-- Gentle press feedback on the primary/interactive buttons. -->
-        <Style Selector="Button.accent, Button.pill, Button.ghost, Button.rowAdd, Button.iconBtn, Button.quickAction">
+        <Style Selector="Button.primary, Button.pill, Button.ghost, Button.rowAdd, Button.iconBtn, Button.quickAction">
             <Setter Property="RenderTransform" Value="none" />
             <Setter Property="Transitions">
                 <Transitions>
@@ -117,7 +175,7 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.accent:pressed, Button.pill:pressed, Button.ghost:pressed, Button.rowAdd:pressed, Button.iconBtn:pressed">
+        <Style Selector="Button.primary:pressed, Button.pill:pressed, Button.ghost:pressed, Button.rowAdd:pressed, Button.iconBtn:pressed">
             <Setter Property="RenderTransform" Value="scale(0.96)" />
         </Style>
 
@@ -304,15 +362,50 @@
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
 
-        <!-- Text inputs / combos -->
+        <!-- Text inputs / combos: flat white, square, accent focus ring -->
         <Style Selector="TextBox.field">
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="10,8" />
-            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
+        <!-- Style the template border directly so the chrome can't be re-filled
+             by theme-variant resources. -->
+        <Style Selector="TextBox.field /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="TextBox.field:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#9CA3AF" />
+        </Style>
+        <Style Selector="TextBox.field:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+        <Style Selector="TextBox.field:focus-within /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+
         <Style Selector="ComboBox.field">
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="10,7" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
 
@@ -320,11 +413,14 @@
         <Style Selector="Button.ghost">
             <Setter Property="Background" Value="White" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="12,9" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="White" />
         </Style>
         <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="#F3F4F6" />
@@ -368,7 +464,7 @@
                 <!-- Bottom block: cart button with live item-count badge -->
                 <StackPanel DockPanel.Dock="Bottom" Spacing="12">
                     <Border Height="1" Background="{StaticResource HairLine}" Margin="0,0,0,4" />
-                    <Button Classes="accent" Command="{Binding ToggleCartDrawerCommand}"
+                    <Button Classes="primary" Command="{Binding ToggleCartDrawerCommand}"
                             ToolTip.Tip="View cart and check out">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Path Grid.Column="0" Classes="icon" Width="18" Height="18" Stroke="White"
@@ -624,7 +720,7 @@
                                 <TextBlock Grid.Column="0" Text="{Binding StockStatus}" FontSize="13"
                                            Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"
                                            TextWrapping="Wrap" Margin="2,0,12,0" />
-                                <Button Grid.Column="1" Classes="accent" Padding="14,10"
+                                <Button Grid.Column="1" Classes="primary" Padding="14,10"
                                         Command="{Binding OpenAddProductCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Classes="icon" Width="16" Height="16" Stroke="White"
@@ -895,7 +991,7 @@
                                         </Grid>
                                     </Border>
 
-                                    <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                                    <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
                                             Padding="12,14" Command="{Binding CompleteSaleCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                             <Path Classes="icon" Width="17" Height="17" Stroke="White"
@@ -966,7 +1062,7 @@
                         BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0">
                     <DockPanel Margin="20,24">
                         <!-- Add to cart pinned bottom -->
-                        <Button DockPanel.Dock="Bottom" Classes="accent" Command="{Binding AddToCartCommand}">
+                        <Button DockPanel.Dock="Bottom" Classes="primary" Command="{Binding AddToCartCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                 <Path Classes="icon" Width="18" Height="18" Stroke="White"
                                       Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
@@ -1068,7 +1164,7 @@
                     <!-- Bottom action bar -->
                     <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
                             Padding="24,16">
-                        <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                        <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
                                 Command="{Binding AddSelectedToCartCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                 <Path Classes="icon" Width="17" Height="17" Stroke="White"
@@ -1207,7 +1303,7 @@
                             <TextBlock Text="{Binding StockStatus}" FontSize="12" TextWrapping="Wrap"
                                        Foreground="{StaticResource TextMuted}" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                <Button Grid.Column="0" Classes="accent" Padding="12,12"
+                                <Button Grid.Column="0" Classes="primary" Padding="12,12"
                                         Command="{Binding SaveProductCommand}"
                                         Content="{Binding SaveButtonLabel}" />
                                 <Button Grid.Column="1" Classes="ghost" Command="{Binding NewProductCommand}"
@@ -1316,7 +1412,7 @@
                             </Grid>
                             <TextBlock Text="{Binding ChangeLabel}" FontSize="13" FontWeight="SemiBold"
                                        HorizontalAlignment="Right" Foreground="{StaticResource Accent}" />
-                            <Button Classes="accent" CornerRadius="0" HorizontalAlignment="Stretch"
+                            <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
                                     Padding="12,13" Command="{Binding GoToCheckoutCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                     <TextBlock Text="Checkout" FontWeight="Bold" />
