@@ -732,6 +732,119 @@ public class DatabaseService
         return results;
     }
 
+    // ==================== Reports ====================
+
+    /// <summary>
+    /// Aggregate totals for sales whose timestamp falls in [from, to).
+    /// </summary>
+    public SalesSummary GetSalesSummary(DateTime from, DateTime to)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                COUNT(*) AS Orders,
+                COALESCE(SUM(TotalAmount), 0) AS Revenue,
+                COALESCE(SUM(Discount), 0)    AS Discount,
+                COALESCE(SUM(TaxAmount), 0)   AS Tax,
+                COALESCE((SELECT SUM(si.Quantity)
+                          FROM SaleItems si
+                          JOIN Sales s2 ON s2.Id = si.SaleId
+                          WHERE s2.Timestamp >= $from AND s2.Timestamp < $to), 0) AS Items
+            FROM Sales
+            WHERE Timestamp >= $from AND Timestamp < $to;";
+        cmd.Parameters.AddWithValue("$from", from);
+        cmd.Parameters.AddWithValue("$to", to);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return new SalesSummary();
+
+        return new SalesSummary
+        {
+            OrderCount = reader.GetInt32(0),
+            Revenue = reader.GetDouble(1),
+            Discount = reader.GetDouble(2),
+            Tax = reader.GetDouble(3),
+            ItemsSold = reader.GetInt32(4),
+        };
+    }
+
+    /// <summary>
+    /// Units sold and revenue per product type in [from, to), highest quantity
+    /// first. Grouped by the description stored on the sale line, so it stays
+    /// correct even after a product is edited or deleted.
+    /// </summary>
+    public List<ProductSalesRow> GetProductSales(DateTime from, DateTime to)
+    {
+        var results = new List<ProductSalesRow>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                COALESCE(p.Category, '') AS Category,
+                si.Material, si.Dimension, si.Unit,
+                SUM(si.Quantity) AS Qty,
+                COUNT(DISTINCT si.SaleId) AS Orders,
+                SUM(si.LineTotal) AS Revenue
+            FROM SaleItems si
+            JOIN Sales s ON s.Id = si.SaleId
+            LEFT JOIN Products p ON p.Id = si.ProductId
+            WHERE s.Timestamp >= $from AND s.Timestamp < $to
+            GROUP BY si.Material, si.Dimension, si.Unit
+            ORDER BY Qty DESC, Revenue DESC;";
+        cmd.Parameters.AddWithValue("$from", from);
+        cmd.Parameters.AddWithValue("$to", to);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            results.Add(new ProductSalesRow
+            {
+                Category = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                Material = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                Dimension = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                Unit = reader.IsDBNull(3) ? "ea" : reader.GetString(3),
+                QuantitySold = reader.GetInt32(4),
+                OrderCount = reader.GetInt32(5),
+                Revenue = reader.IsDBNull(6) ? 0 : reader.GetDouble(6),
+            });
+        }
+        return results;
+    }
+
+    /// <summary>Units sold and revenue grouped by category in [from, to).</summary>
+    public List<CategorySalesRow> GetCategorySales(DateTime from, DateTime to)
+    {
+        var results = new List<CategorySalesRow>();
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT COALESCE(p.Category, '') AS Category,
+                   SUM(si.Quantity) AS Qty,
+                   SUM(si.LineTotal) AS Revenue
+            FROM SaleItems si
+            JOIN Sales s ON s.Id = si.SaleId
+            LEFT JOIN Products p ON p.Id = si.ProductId
+            WHERE s.Timestamp >= $from AND s.Timestamp < $to
+            GROUP BY COALESCE(p.Category, '')
+            ORDER BY Revenue DESC;";
+        cmd.Parameters.AddWithValue("$from", from);
+        cmd.Parameters.AddWithValue("$to", to);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            results.Add(new CategorySalesRow
+            {
+                Category = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                QuantitySold = reader.GetInt32(1),
+                Revenue = reader.IsDBNull(2) ? 0 : reader.GetDouble(2),
+            });
+        }
+        return results;
+    }
+
     private static Product ReadProduct(SqliteDataReader reader) => new()
     {
         Id = reader.GetInt64(0),

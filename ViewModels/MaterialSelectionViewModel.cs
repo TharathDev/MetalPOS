@@ -85,6 +85,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsInventorySection))]
     [NotifyPropertyChangedFor(nameof(IsStockSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
+    [NotifyPropertyChangedFor(nameof(IsReportsSection))]
+    [NotifyPropertyChangedFor(nameof(IsOrderDetailSection))]
+    [NotifyPropertyChangedFor(nameof(IsOrdersNavActive))]
     [NotifyPropertyChangedFor(nameof(IsCheckoutSection))]
     [NotifyPropertyChangedFor(nameof(IsCompleteSection))]
     [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
@@ -94,7 +97,12 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     public bool IsInventorySection => ActiveSection == "Inventory";
     public bool IsStockSection => ActiveSection == "Stock";
-    public bool IsOrdersSection => ActiveSection is "Orders" or "Reports";
+    public bool IsOrdersSection => ActiveSection == "Orders";
+    public bool IsReportsSection => ActiveSection == "Reports";
+    public bool IsOrderDetailSection => ActiveSection == "OrderDetail";
+
+    /// <summary>Keeps the Orders nav item highlighted while viewing an order's detail.</summary>
+    public bool IsOrdersNavActive => IsOrdersSection || IsOrderDetailSection;
     public bool IsCheckoutSection => ActiveSection == "Checkout";
 
     /// <summary>The post-sale "Order Completed" confirmation screen.</summary>
@@ -135,7 +143,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public string SectionTitle => ActiveSection switch
     {
         "Stock" => "Stock Management",
-        "Orders" or "Reports" => "Orders & History",
+        "Orders" => "Orders & History",
+        "Reports" => "Reports",
+        "OrderDetail" => "Order Detail",
         "Checkout" => "Checkout",
         "Complete" => "Order Completed",
         _ => "Material Selection",
@@ -144,7 +154,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public string SectionSubtitle => ActiveSection switch
     {
         "Stock" => "Insert, update, or delete inventory items and create custom metal objects.",
-        "Orders" or "Reports" => "Review completed sales and reprint receipts.",
+        "Orders" => "Review completed sales and reprint receipts.",
+        "Reports" => "Sales and units-sold breakdown by day, week, or month.",
+        "OrderDetail" => "Full detail of the selected order. Reprint the receipt any time.",
         "Checkout" => "Verify quantities and pricing, add customer details, then complete the sale.",
         "Complete" => "The sale has been recorded, stock updated, and the receipt sent to print.",
         _ => "Select a category to view specific stock dimensions and pricing.",
@@ -196,6 +208,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         ActiveSection = section!;
         if (IsOrdersSection)
             LoadOrders();
+        if (IsReportsSection)
+            LoadReport();
         if (IsStockSection)
             LoadStock();
         if (IsInventorySection)
@@ -929,10 +943,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     partial void OnOrderSearchTextChanged(string value) => LoadOrders();
 
-    // ----- Order detail drawer -----
-
-    [ObservableProperty]
-    public partial bool IsOrderDetailOpen { get; set; }
+    // ----- Order detail (full page) -----
 
     /// <summary>The order being inspected, loaded with all of its line items.</summary>
     [ObservableProperty]
@@ -966,7 +977,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Opens the full detail of a stored order.</summary>
+    /// <summary>Opens the full-page detail of a stored order.</summary>
     [RelayCommand]
     private void OpenOrderDetail(Sale? order)
     {
@@ -987,11 +998,16 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             SelectedOrderItems.Add(item);
 
         OrderDetailStatus = string.Empty;
-        IsOrderDetailOpen = true;
+        ActiveSection = "OrderDetail";
     }
 
+    /// <summary>Returns from the order detail page to the orders list.</summary>
     [RelayCommand]
-    private void CloseOrderDetail() => IsOrderDetailOpen = false;
+    private void CloseOrderDetail()
+    {
+        ActiveSection = "Orders";
+        LoadOrders();
+    }
 
     /// <summary>Reprints the selected order's receipt; repeatable any number of times.</summary>
     [RelayCommand]
@@ -1012,6 +1028,110 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (order is null)
             return;
         PrintStoredSale(order.Id);
+    }
+
+    // ==================== Reports ====================
+
+    /// <summary>Report period: "Daily" (today), "Weekly" (this week), "Monthly" (this month).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDailyReport))]
+    [NotifyPropertyChangedFor(nameof(IsWeeklyReport))]
+    [NotifyPropertyChangedFor(nameof(IsMonthlyReport))]
+    public partial string ReportPeriod { get; set; } = "Daily";
+
+    public bool IsDailyReport => ReportPeriod == "Daily";
+    public bool IsWeeklyReport => ReportPeriod == "Weekly";
+    public bool IsMonthlyReport => ReportPeriod == "Monthly";
+
+    [ObservableProperty]
+    public partial string ReportRangeLabel { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ReportOrdersLabel { get; set; } = "0";
+
+    [ObservableProperty]
+    public partial string ReportRevenueLabel { get; set; } = "$0.00";
+
+    [ObservableProperty]
+    public partial string ReportItemsLabel { get; set; } = "0";
+
+    [ObservableProperty]
+    public partial string ReportAvgOrderLabel { get; set; } = "$0.00";
+
+    [ObservableProperty]
+    public partial string ReportDiscountLabel { get; set; } = "$0.00";
+
+    [ObservableProperty]
+    public partial string ReportProductSummary { get; set; } = string.Empty;
+
+    /// <summary>Units-sold-per-type rows for the selected period.</summary>
+    public ObservableCollection<ProductSalesRow> ReportProducts { get; } = new();
+
+    /// <summary>Units sold grouped by category for the selected period.</summary>
+    public ObservableCollection<CategorySalesRow> ReportCategories { get; } = new();
+
+    [RelayCommand]
+    private void SetReportPeriod(string? period)
+    {
+        if (string.IsNullOrWhiteSpace(period) || period == ReportPeriod)
+            return;
+        ReportPeriod = period!;
+        LoadReport();
+    }
+
+    /// <summary>Computes the [from, to) range for the selected period.</summary>
+    private (DateTime From, DateTime To) CurrentReportRange()
+    {
+        var now = DateTime.Now;
+        var today = now.Date;
+        var tomorrow = today.AddDays(1);
+
+        return ReportPeriod switch
+        {
+            "Weekly" => (StartOfWeek(today), tomorrow),
+            "Monthly" => (new DateTime(today.Year, today.Month, 1), tomorrow),
+            _ => (today, tomorrow),
+        };
+    }
+
+    private static DateTime StartOfWeek(DateTime date)
+    {
+        // Week starts Monday.
+        int diff = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-diff);
+    }
+
+    private void LoadReport()
+    {
+        var (from, to) = CurrentReportRange();
+        var endInclusive = to.AddDays(-1);
+
+        ReportRangeLabel = ReportPeriod switch
+        {
+            "Daily" => from.ToString("dddd, MMMM d, yyyy"),
+            "Weekly" => $"{from:MMM d} – {endInclusive:MMM d, yyyy}",
+            "Monthly" => from.ToString("MMMM yyyy"),
+            _ => string.Empty,
+        };
+
+        var summary = _db.GetSalesSummary(from, to);
+        ReportOrdersLabel = summary.OrderCountDisplay;
+        ReportRevenueLabel = summary.RevenueDisplay;
+        ReportItemsLabel = summary.ItemsSoldDisplay;
+        ReportAvgOrderLabel = summary.AverageOrderDisplay;
+        ReportDiscountLabel = summary.DiscountDisplay;
+
+        ReportProducts.Clear();
+        foreach (var row in _db.GetProductSales(from, to))
+            ReportProducts.Add(row);
+
+        ReportCategories.Clear();
+        foreach (var row in _db.GetCategorySales(from, to))
+            ReportCategories.Add(row);
+
+        ReportProductSummary = ReportProducts.Count == 0
+            ? "No items sold in this period."
+            : $"{ReportProducts.Count} product type(s) sold";
     }
 
     // ==================== Misc commands ====================
