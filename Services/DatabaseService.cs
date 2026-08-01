@@ -63,6 +63,27 @@ public class DatabaseService
             ChangeDue       REAL     NOT NULL DEFAULT 0,
             PaymentMethod   TEXT     NOT NULL
         )",
+        @"CREATE TABLE IF NOT EXISTS Shops (
+            Id            TEXT PRIMARY KEY,
+            Name          TEXT NOT NULL DEFAULT '',
+            Phone         TEXT NOT NULL DEFAULT '',
+            Address       TEXT NOT NULL DEFAULT '',
+            Email         TEXT NOT NULL DEFAULT '',
+            VatTin        TEXT NOT NULL DEFAULT '',
+            VatRate       REAL NOT NULL DEFAULT 0,
+            ReceiptFooter TEXT NOT NULL DEFAULT '',
+            Currency      TEXT NOT NULL DEFAULT 'USD',
+            ExchangeRate  REAL NOT NULL DEFAULT 4100,
+            MachineId     TEXT NOT NULL DEFAULT '',
+            RecoveryKey   TEXT NOT NULL DEFAULT '',
+            CreatedAt     DATETIME NOT NULL,
+            UpdatedAt     DATETIME NOT NULL
+        )",
+        // Simple key/value store for local pointers (active shop, machine id).
+        @"CREATE TABLE IF NOT EXISTS AppState (
+            Key   TEXT PRIMARY KEY,
+            Value TEXT NOT NULL DEFAULT ''
+        )",
         // No foreign key on ProductId: sale history must survive a product being
         // edited or deleted, so the description is copied onto the line instead.
         @"CREATE TABLE IF NOT EXISTS SaleItems (
@@ -87,6 +108,7 @@ public class DatabaseService
     {
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_Sales_ReceiptNo ON Sales(ReceiptNo) WHERE ReceiptNo <> ''",
         "CREATE INDEX IF NOT EXISTS IX_SaleItems_SaleId ON SaleItems(SaleId)",
+        "CREATE INDEX IF NOT EXISTS IX_Shops_RecoveryKey ON Shops(RecoveryKey)",
     };
 
     /// <summary>
@@ -97,7 +119,7 @@ public class DatabaseService
         TableStatements.Concat(IndexStatements).ToArray();
 
     /// <summary>Tables that are included in the remote backup, in FK-safe insert order.</summary>
-    public static readonly string[] BackupTables = { "Products", "Sales", "SaleItems" };
+    public static readonly string[] BackupTables = { "Shops", "AppState", "Products", "Sales", "SaleItems" };
 
     private SqliteConnection OpenConnection()
     {
