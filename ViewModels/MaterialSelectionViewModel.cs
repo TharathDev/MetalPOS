@@ -21,15 +21,19 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     private readonly DatabaseService _db;
     private readonly ReceiptService _receipt = new();
     private readonly TursoSyncService? _sync;
+    private readonly string? _signedInPhone;
 
     public MaterialSelectionViewModel() : this(new DatabaseService()) { }
 
-    public MaterialSelectionViewModel(DatabaseService db, TursoSyncService? sync = null)
+    public MaterialSelectionViewModel(DatabaseService db, TursoSyncService? sync = null, string? signedInPhone = null)
     {
         _db = db;
         _sync = sync;
+        _signedInPhone = signedInPhone;
         PaymentMethods = new ObservableCollection<string> { "Cash", "Card", "Bank Transfer" };
-        Units = new ObservableCollection<string> { "ea", "sheet", "ft", "box", "pair", "kg", "roll" };
+        Units = new ObservableCollection<string> { "ea", "mm", "cm", "dm", "m", "in", "ft", "cm²", "dm²", "m²", "sheet", "box", "pair", "kg", "roll" };
+        Languages = new ObservableCollection<string> { "English", "ខ្មែរ (កម្ពុជា)", "Chinese", "Vietnamese" };
+        Users = new ObservableCollection<string>();
 
         if (_sync is not null)
         {
@@ -72,6 +76,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             LoadCategories();
             LoadStock();
             LoadOrders();
+            LoadUsers();
         }
         catch
         {
@@ -86,6 +91,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsStockSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersSection))]
     [NotifyPropertyChangedFor(nameof(IsReportsSection))]
+    [NotifyPropertyChangedFor(nameof(IsSettingsSection))]
     [NotifyPropertyChangedFor(nameof(IsOrderDetailSection))]
     [NotifyPropertyChangedFor(nameof(IsOrdersNavActive))]
     [NotifyPropertyChangedFor(nameof(IsCheckoutSection))]
@@ -99,6 +105,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsStockSection => ActiveSection == "Stock";
     public bool IsOrdersSection => ActiveSection == "Orders";
     public bool IsReportsSection => ActiveSection == "Reports";
+    public bool IsSettingsSection => ActiveSection == "Settings";
     public bool IsOrderDetailSection => ActiveSection == "OrderDetail";
 
     /// <summary>Keeps the Orders nav item highlighted while viewing an order's detail.</summary>
@@ -140,22 +147,36 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         CartDrawerWidth = Math.Max(320d, Math.Floor(width * 0.3d));
     }
 
-    public string SectionTitle => ActiveSection switch
-    {
-        "Stock" => "Stock Management",
-        "Orders" => "Orders & History",
-        "Reports" => "Reports",
-        "OrderDetail" => "Order Detail",
-        "Checkout" => "Checkout",
-        "Complete" => "Order Completed",
-        _ => "Material Selection",
-    };
+    public string SectionTitle => IsKhmer
+        ? ActiveSection switch
+        {
+            "Stock" => "ការគ្រប់គ្រងស្តុក",
+            "Orders" => "ការបញ្ជាទិញ និងប្រវត្តិ",
+            "Reports" => "របាយការណ៍",
+            "Settings" => "ការកំណត់",
+            "OrderDetail" => "ព័ត៌មានលម្អិតការបញ្ជាទិញ",
+            "Checkout" => "បង់ប្រាក់",
+            "Complete" => "ការបញ្ជាទិញបានបញ្ចប់",
+            _ => "ការជ្រើសរើសសម្ភារៈ",
+        }
+        : ActiveSection switch
+        {
+            "Stock" => "Stock Management",
+            "Orders" => "Orders & History",
+            "Reports" => "Reports",
+            "Settings" => "Settings",
+            "OrderDetail" => "Order Detail",
+            "Checkout" => "Checkout",
+            "Complete" => "Order Completed",
+            _ => "Material Selection",
+        };
 
     public string SectionSubtitle => ActiveSection switch
     {
-        "Stock" => "Insert, update, or delete inventory items and create custom metal objects.",
-        "Orders" => "Review completed sales and reprint receipts.",
-        "Reports" => "Sales and units-sold breakdown by day, week, or month.",
+        "Stock" => IsKhmer ? "បន្ថែម កែប្រែ ឬលុបទំនិញស្តុក និងបង្កើតទំនិញលោហៈផ្ទាល់ខ្លួន។" : "Insert, update, or delete inventory items and create custom metal objects.",
+        "Orders" => IsKhmer ? "ពិនិត្យការលក់ដែលបានបញ្ចប់ និងបោះពុម្ពបង្កាន់ដៃឡើងវិញ។" : "Review completed sales and reprint receipts.",
+        "Reports" => IsKhmer ? "សង្ខេបការបញ្ជាទិញ និងការលក់តាមថ្ងៃ សប្តាហ៍ ឬខែ។" : "Sales and units-sold breakdown by day, week, or month.",
+        "Settings" => "Manage units, users, and system preferences for this workspace.",
         "OrderDetail" => "Full detail of the selected order. Reprint the receipt any time.",
         "Checkout" => "Verify quantities and pricing, add customer details, then complete the sale.",
         "Complete" => "The sale has been recorded, stock updated, and the receipt sent to print.",
@@ -172,6 +193,346 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string BackupStatus { get; set; } = "Cloud backup: waiting for first run.";
+
+    // ==================== Settings ====================
+
+    public ObservableCollection<string> Languages { get; }
+    public ObservableCollection<string> Users { get; }
+    public event Action? SignOutRequested;
+    public bool CanManageUsers => AuthService.IsPrimaryAdministrator(_signedInPhone);
+    public bool IsUsersAccessRestricted => !CanManageUsers;
+    private const string KhmerLanguage = "ខ្មែរ (កម្ពុជា)";
+
+    [ObservableProperty]
+    public partial string SelectedLanguage { get; set; } = "English";
+
+    public bool IsKhmer => SelectedLanguage == KhmerLanguage;
+    public string NavInventoryText => IsKhmer ? "សារពើភ័ណ្ឌ" : "Inventory";
+    public string NavStockText => IsKhmer ? "ស្តុក" : "Stock";
+    public string NavOrdersText => IsKhmer ? "ការបញ្ជាទិញ" : "Orders";
+    public string NavReportsText => IsKhmer ? "របាយការណ៍" : "Reports";
+    public string AdminUserText => IsKhmer ? "អ្នកគ្រប់គ្រង" : "Admin User";
+    public string SettingsCenterText => IsKhmer ? "មជ្ឈមណ្ឌលការកំណត់" : "Settings Center";
+    public string SettingsDescriptionText => IsKhmer ? "កំណត់រចនាសម្ព័ន្ធកន្លែងធ្វើការរបស់អ្នកនៅទីនេះ។" : "Configure this workspace in one place.";
+    public string SettingsNavText => IsKhmer ? "ការកំណត់" : "SETTINGS";
+    public string UnitsText => IsKhmer ? "ឯកតា" : "Units";
+    public string UsersText => IsKhmer ? "អ្នកប្រើប្រាស់" : "Users";
+    public string SystemText => IsKhmer ? "ប្រព័ន្ធ" : "System";
+    public string AddUnitText => IsKhmer ? "បន្ថែមឯកតា" : "Add unit";
+    public string AddUserText => IsKhmer ? "បន្ថែមអ្នកប្រើប្រាស់" : "Add user";
+    public string InterfaceLanguageText => IsKhmer ? "ភាសាកម្មវិធី" : "Interface language";
+    private string L(string english, string khmer) => IsKhmer ? khmer : english;
+    public string StockItemText => L("ITEM", "ទំនិញ");
+    public string PriceText => L("PRICE", "តម្លៃ");
+    public string StockQtyText => L("STOCK", "ស្តុក");
+    public string SkuText => L("SKU", "លេខកូដ");
+    public string ActionsText => L("ACTIONS", "សកម្មភាព");
+    public string EditText => L("Edit", "កែប្រែ");
+    public string DeleteText => L("Delete", "លុប");
+    public string GroupCategoryText => L("GROUP / CATEGORY", "ក្រុម / ប្រភេទ");
+    public string MaterialNameText => L("MATERIAL / NAME", "សម្ភារៈ / ឈ្មោះ");
+    public string DimensionSpecText => L("DIMENSION / SPEC", "ទំហំ / លក្ខណៈបច្ចេកទេស");
+    public string UnitText => L("UNIT", "ឯកតា");
+    public string SkuLabelText => L("SKU", "លេខកូដ");
+    public string ItemPriceText => L("PRICE", "តម្លៃ");
+    public string StockQtyLabelText => L("STOCK QTY", "បរិមាណស្តុក");
+    public string OptionalText => L("optional", "ជាជម្រើស");
+    public string CategoryPlaceholderText => L("e.g. Steel, Copper, Aluminium", "ឧ. ដែក ថ្ពាន់ អាលុយមីញ៉ូម");
+    public string MaterialPlaceholderText => L("e.g. Alloy Steel Grade A36", "ឧ. ដែកលោហធាតុ Alloy Grade A36");
+    public string DimensionPlaceholderText => L("e.g. 2\" x 4\"", "ឧ. 2\" x 4\"");
+    public string PricePlaceholderText => L("0.00", "០.០០");
+    public string StockPlaceholderText => L("0", "០");
+    public string EnterDetailsText => L("Enter details for a new metal object.", "សូមបញ្ចូលព័ត៌មានសម្រាប់ទំនិញលោហៈថ្មី។");
+    public string NewItemText => L("Add New Item", "បន្ថែមទំនិញថ្មី");
+    public string UpdateItemText => L("Update Item", "ធ្វើបច្ចុប្បន្នភាពទំនិញ");
+    public string AddItemText => L("Add Item", "បន្ថែមទំនិញ");
+    public string ClearText => L("Clear", "សម្អាត");
+    public string SearchMaterialsPlaceholder => L("Search materials, SKU, or categories...", "ស្វែងរកសម្ភារៈ លេខកូដ ឬប្រភេទ...");
+    public string LiveInventoryText => L("LIVE INVENTORY", "ស្តុកបន្តផ្ទាល់");
+    public string OrdersSummaryDisplay => IsKhmer && OrdersSummary == "No sales yet." ? "មិនទាន់មានការលក់ទេ។" : OrdersSummary;
+    public string SearchOrdersPlaceholder => L("Search receipt no or customer", "ស្វែងរកលេខបង្កាន់ដៃ ឬអតិថិជន");
+    public string ReceiptNoText => L("RECEIPT NO", "លេខបង្កាន់ដៃ");
+    public string DateText => L("DATE", "កាលបរិច្ឆេទ");
+    public string CustomerText => L("CUSTOMER", "អតិថិជន");
+    public string ItemsText => L("ITEMS", "ទំនិញ");
+    public string TotalText => L("TOTAL", "សរុប");
+    public string DailyText => L("Daily", "ប្រចាំថ្ងៃ");
+    public string WeeklyText => L("Weekly", "ប្រចាំសប្តាហ៍");
+    public string MonthlyText => L("Monthly", "ប្រចាំខែ");
+    public string OrdersText => L("ORDERS", "ការបញ្ជាទិញ");
+    public string RevenueText => L("REVENUE", "ចំណូល");
+    public string ItemsSoldText => L("ITEMS SOLD", "ទំនិញបានលក់");
+    public string AvgOrderText => L("AVG ORDER", "មធ្យមក្នុងការបញ្ជាទិញ");
+    public string ProductTypeText => L("PRODUCT TYPE", "ប្រភេទទំនិញ");
+    public string DimensionText => L("DIMENSION", "ទំហំ");
+    public string SoldText => L("SOLD", "បានលក់");
+    public string RevenueHeaderText => L("REVENUE", "ចំណូល");
+    public string ByCategoryText => L("By Category", "តាមប្រភេទ");
+    public string ViewText => L("View", "មើល");
+    public string PrintReceiptText => L("Print receipt", "បោះពុម្ពបង្កាន់ដៃ");
+    public string CheckoutText => L("Checkout", "បង់ប្រាក់");
+    public string CustomerDetailsText => L("Customer Details", "ព័ត៌មានអតិថិជន");
+    public string ContinueShoppingText => L("Continue Shopping", "បន្តជ្រើសរើសទំនិញ");
+    public string CompleteSalePrintText => L("Complete Sale & Print", "បញ្ចប់ការលក់ និងបោះពុម្ព");
+    public string QuickActionsText => L("QUICK ACTIONS", "សកម្មភាពរហ័ស");
+    public string ReportProductSummaryDisplay => IsKhmer && ReportProductSummary == "No items sold in this period." ? "មិនមានទំនិញបានលក់ក្នុងអំឡុងពេលនេះទេ។" : ReportProductSummary;
+    public string MaterialSpecsText => L("MATERIAL SPECS", "លក្ខណៈបច្ចេកទេសសម្ភារៈ");
+    public string SelectDimensionsText => L("Select Dimensions", "ជ្រើសរើសទំហំ");
+    public string SelectionText => L("Selection", "ការជ្រើសរើស");
+    public string AddToCartText => L("Add to Cart", "បន្ថែមទៅកន្ត្រក");
+    public string AddToCartUpperText => L("ADD TO CART", "បន្ថែមទៅកន្ត្រក");
+    public string TechnicalDocumentationText => L("TECHNICAL DOCUMENTATION", "ឯកសារបច្ចេកទេស");
+    public string CertificationText => L("Certification of Compliance", "វិញ្ញាបនបត្រអនុលោមភាព");
+
+    [ObservableProperty]
+    public partial string NewUnitText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewUserPhone { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewUserPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewUserPasswordConfirmation { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewUserRole { get; set; } = "Cashier";
+
+    [ObservableProperty]
+    public partial string SettingsStatus { get; set; } = "Settings are ready.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUnitsSettingsTab))]
+    [NotifyPropertyChangedFor(nameof(IsUsersSettingsTab))]
+    [NotifyPropertyChangedFor(nameof(IsSystemSettingsTab))]
+    public partial string SettingsTab { get; set; } = "Units";
+
+    [ObservableProperty]
+    public partial bool IsSettingsOpen { get; set; }
+
+    public bool IsUnitsSettingsTab => SettingsTab == "Units";
+    public bool IsUsersSettingsTab => SettingsTab == "Users";
+    public bool IsSystemSettingsTab => SettingsTab == "System";
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        SettingsTab = "Units";
+        SettingsStatus = "Settings are ready.";
+        IsSettingsOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseSettings() => IsSettingsOpen = false;
+
+    [RelayCommand]
+    private void SelectSettingsTab(string? tab)
+    {
+        if (tab is "Units" or "Users" or "System")
+            SettingsTab = tab;
+    }
+
+    [RelayCommand]
+    private void AddUnit()
+    {
+        var unit = NewUnitText.Trim();
+        if (string.IsNullOrWhiteSpace(unit))
+        {
+            SettingsStatus = "Enter a unit name first.";
+            return;
+        }
+        if (Units.Any(existing => string.Equals(existing, unit, StringComparison.OrdinalIgnoreCase)))
+        {
+            SettingsStatus = $"The unit \"{unit}\" already exists.";
+            return;
+        }
+
+        Units.Add(unit);
+        NewUnitText = string.Empty;
+        SettingsStatus = $"Added unit \"{unit}\".";
+    }
+
+    [RelayCommand]
+    private void RemoveUnit(string? unit)
+    {
+        if (string.IsNullOrWhiteSpace(unit) || Units.Count <= 1)
+            return;
+        Units.Remove(unit);
+        SettingsStatus = $"Removed unit \"{unit}\".";
+    }
+
+    [RelayCommand]
+    private void AddUser()
+    {
+        if (!CanManageUsers)
+        {
+            SettingsStatus = "Only the primary administrator can register phone accounts.";
+            return;
+        }
+
+        var phone = AuthService.NormalizeCambodianPhone(NewUserPhone);
+        var role = string.IsNullOrWhiteSpace(NewUserRole) ? "Cashier" : NewUserRole.Trim();
+        if (phone is null)
+        {
+            SettingsStatus = "Enter a valid Cambodian phone number.";
+            return;
+        }
+        if (NewUserPassword.Length < 8 || NewUserPassword.Length > 128)
+        {
+            SettingsStatus = "Use a password between 8 and 128 characters.";
+            return;
+        }
+        if (!string.Equals(NewUserPassword, NewUserPasswordConfirmation, StringComparison.Ordinal))
+        {
+            SettingsStatus = "Passwords do not match.";
+            return;
+        }
+        if (role is not ("Administrator" or "Cashier" or "Warehouse"))
+        {
+            SettingsStatus = "Choose Administrator, Cashier, or Warehouse.";
+            return;
+        }
+        var registration = _db.RegisterUser(_signedInPhone!, phone, NewUserPassword, role);
+        if (registration == UserRegistrationResult.DuplicatePhone)
+        {
+            SettingsStatus = "This phone number is already registered.";
+            return;
+        }
+        if (registration == UserRegistrationResult.NotAuthorized)
+        {
+            SettingsStatus = "Only the primary administrator can register phone accounts.";
+            return;
+        }
+        if (registration != UserRegistrationResult.Success)
+        {
+            SettingsStatus = "Could not register the phone account. Please try again.";
+            return;
+        }
+
+        NewUserPhone = string.Empty;
+        NewUserPassword = string.Empty;
+        NewUserPasswordConfirmation = string.Empty;
+        LoadUsers();
+        SettingsStatus = "Phone account registered.";
+    }
+
+    [RelayCommand]
+    private void RemoveUser(string? user)
+    {
+        if (string.IsNullOrWhiteSpace(user))
+            return;
+        SettingsStatus = "Accounts cannot be removed here.";
+    }
+
+    [RelayCommand]
+    private void SignOut()
+    {
+        IsSettingsOpen = false;
+        SignOutRequested?.Invoke();
+    }
+
+    private void LoadUsers()
+    {
+        Users.Clear();
+        foreach (var user in _db.GetUsers())
+            Users.Add($"{user.Phone} · {user.Role}");
+    }
+
+    partial void OnSelectedLanguageChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsKhmer));
+        OnPropertyChanged(nameof(NavInventoryText));
+        OnPropertyChanged(nameof(NavStockText));
+        OnPropertyChanged(nameof(NavOrdersText));
+        OnPropertyChanged(nameof(NavReportsText));
+        OnPropertyChanged(nameof(AdminUserText));
+        OnPropertyChanged(nameof(SettingsCenterText));
+        OnPropertyChanged(nameof(SettingsDescriptionText));
+        OnPropertyChanged(nameof(SettingsNavText));
+        OnPropertyChanged(nameof(UnitsText));
+        OnPropertyChanged(nameof(UsersText));
+        OnPropertyChanged(nameof(SystemText));
+        OnPropertyChanged(nameof(AddUnitText));
+        OnPropertyChanged(nameof(AddUserText));
+        OnPropertyChanged(nameof(InterfaceLanguageText));
+        OnPropertyChanged(nameof(StockItemText));
+        OnPropertyChanged(nameof(PriceText));
+        OnPropertyChanged(nameof(StockQtyText));
+        OnPropertyChanged(nameof(SkuText));
+        OnPropertyChanged(nameof(ActionsText));
+        OnPropertyChanged(nameof(EditText));
+        OnPropertyChanged(nameof(DeleteText));
+        OnPropertyChanged(nameof(GroupCategoryText));
+        OnPropertyChanged(nameof(MaterialNameText));
+        OnPropertyChanged(nameof(DimensionSpecText));
+        OnPropertyChanged(nameof(UnitText));
+        OnPropertyChanged(nameof(SkuLabelText));
+        OnPropertyChanged(nameof(ItemPriceText));
+        OnPropertyChanged(nameof(StockQtyLabelText));
+        OnPropertyChanged(nameof(OptionalText));
+        OnPropertyChanged(nameof(CategoryPlaceholderText));
+        OnPropertyChanged(nameof(MaterialPlaceholderText));
+        OnPropertyChanged(nameof(DimensionPlaceholderText));
+        OnPropertyChanged(nameof(PricePlaceholderText));
+        OnPropertyChanged(nameof(StockPlaceholderText));
+        OnPropertyChanged(nameof(EnterDetailsText));
+        OnPropertyChanged(nameof(NewItemText));
+        OnPropertyChanged(nameof(UpdateItemText));
+        OnPropertyChanged(nameof(AddItemText));
+        OnPropertyChanged(nameof(ClearText));
+        OnPropertyChanged(nameof(SearchMaterialsPlaceholder));
+        OnPropertyChanged(nameof(LiveInventoryText));
+        OnPropertyChanged(nameof(OrdersSummaryDisplay));
+        OnPropertyChanged(nameof(SearchOrdersPlaceholder));
+        OnPropertyChanged(nameof(ReceiptNoText));
+        OnPropertyChanged(nameof(DateText));
+        OnPropertyChanged(nameof(CustomerText));
+        OnPropertyChanged(nameof(ItemsText));
+        OnPropertyChanged(nameof(TotalText));
+        OnPropertyChanged(nameof(DailyText));
+        OnPropertyChanged(nameof(WeeklyText));
+        OnPropertyChanged(nameof(MonthlyText));
+        OnPropertyChanged(nameof(OrdersText));
+        OnPropertyChanged(nameof(RevenueText));
+        OnPropertyChanged(nameof(ItemsSoldText));
+        OnPropertyChanged(nameof(AvgOrderText));
+        OnPropertyChanged(nameof(ProductTypeText));
+        OnPropertyChanged(nameof(DimensionText));
+        OnPropertyChanged(nameof(SoldText));
+        OnPropertyChanged(nameof(RevenueHeaderText));
+        OnPropertyChanged(nameof(ByCategoryText));
+        OnPropertyChanged(nameof(ViewText));
+        OnPropertyChanged(nameof(PrintReceiptText));
+        OnPropertyChanged(nameof(CheckoutText));
+        OnPropertyChanged(nameof(CustomerDetailsText));
+        OnPropertyChanged(nameof(ContinueShoppingText));
+        OnPropertyChanged(nameof(CompleteSalePrintText));
+        OnPropertyChanged(nameof(QuickActionsText));
+        OnPropertyChanged(nameof(ReportProductSummaryDisplay));
+        OnPropertyChanged(nameof(MaterialSpecsText));
+        OnPropertyChanged(nameof(SelectDimensionsText));
+        OnPropertyChanged(nameof(SelectionText));
+        OnPropertyChanged(nameof(AddToCartText));
+        OnPropertyChanged(nameof(AddToCartUpperText));
+        OnPropertyChanged(nameof(TechnicalDocumentationText));
+        OnPropertyChanged(nameof(CertificationText));
+
+        foreach (var product in StockItems)
+            product.IsKhmer = IsKhmer;
+        foreach (var product in CategoryProducts)
+            product.IsKhmer = IsKhmer;
+        OnPropertyChanged(nameof(SaveButtonLabel));
+        OnPropertyChanged(nameof(FormTitle));
+        OnPropertyChanged(nameof(SectionTitle));
+        OnPropertyChanged(nameof(SectionSubtitle));
+
+        SettingsStatus = value == "English"
+            ? "English selected."
+            : value == KhmerLanguage
+                ? "បានជ្រើសរើសភាសាខ្មែរ។"
+                : $"{value} selected.";
+    }
 
     [ObservableProperty]
     public partial string DetailSubtitle { get; set; } = "Select an item to view details";
@@ -198,6 +559,12 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             IsCustom = true,
             CardWidth = CategoryCardWidth,
         });
+    }
+
+    private Product ApplyProductLanguage(Product product)
+    {
+        product.IsKhmer = IsKhmer;
+        return product;
     }
 
     [RelayCommand]
@@ -248,7 +615,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         foreach (var p in _db.GetProductsByCategory(categoryName!))
         {
             p.CartQuantity = Cart.FirstOrDefault(line => line.ProductId == p.Id)?.Quantity ?? 0;
-            CategoryProducts.Add(p);
+            CategoryProducts.Add(ApplyProductLanguage(p));
         }
 
         var materials = CategoryProducts.Select(p => p.Name).Distinct().ToList();
@@ -686,7 +1053,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         {
             CategoryProducts.Clear();
             foreach (var p in _db.GetProductsByCategory(DetailCategory))
-                CategoryProducts.Add(p);
+                CategoryProducts.Add(ApplyProductLanguage(p));
         }
 
         IsDetailOpen = false;
@@ -772,6 +1139,13 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     public ObservableCollection<Product> StockItems { get; } = new();
     public ObservableCollection<string> Units { get; }
+    public ObservableCollection<string> CategoryChoices { get; } = new();
+    public ObservableCollection<string> MaterialChoices { get; } = new();
+
+    private const string CreateCategoryChoice = "＋ Create new group";
+    private const string CreateMaterialChoice = "＋ Create new material";
+    private const string CreateCategoryChoiceKhmer = "＋ បង្កើតក្រុមថ្មី";
+    private const string CreateMaterialChoiceKhmer = "＋ បង្កើតសម្ភារៈថ្មី";
 
     [ObservableProperty]
     public partial string StockStatus { get; set; } = "Ready.";
@@ -784,11 +1158,28 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsEditing))]
     [NotifyPropertyChangedFor(nameof(FormTitle))]
     [NotifyPropertyChangedFor(nameof(SaveButtonLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowCategoryTextInput))]
+    [NotifyPropertyChangedFor(nameof(ShowMaterialTextInput))]
     public partial long EditingProductId { get; set; }
 
     public bool IsEditing => EditingProductId != 0;
-    public string FormTitle => IsEditing ? "Edit Item" : "Add New Item";
-    public string SaveButtonLabel => IsEditing ? "Update Item" : "Add Item";
+    public string FormTitle => IsKhmer ? (IsEditing ? "កែប្រែទំនិញ" : "បន្ថែមទំនិញថ្មី") : (IsEditing ? "Edit Item" : "Add New Item");
+    public string SaveButtonLabel => IsKhmer ? (IsEditing ? "ធ្វើបច្ចុប្បន្នភាពទំនិញ" : "បន្ថែមទំនិញ") : (IsEditing ? "Update Item" : "Add Item");
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNewCategoryEntry))]
+    [NotifyPropertyChangedFor(nameof(ShowCategoryTextInput))]
+    public partial string? SelectedCategoryChoice { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNewMaterialEntry))]
+    [NotifyPropertyChangedFor(nameof(ShowMaterialTextInput))]
+    public partial string? SelectedMaterialChoice { get; set; }
+
+    public bool IsNewCategoryEntry => SelectedCategoryChoice == CreateCategoryChoice || SelectedCategoryChoice == CreateCategoryChoiceKhmer;
+    public bool IsNewMaterialEntry => SelectedMaterialChoice == CreateMaterialChoice || SelectedMaterialChoice == CreateMaterialChoiceKhmer;
+    public bool ShowCategoryTextInput => IsEditing || IsNewCategoryEntry;
+    public bool ShowMaterialTextInput => IsEditing || IsNewMaterialEntry;
 
     [ObservableProperty] public partial string FormCategory { get; set; } = string.Empty;
     [ObservableProperty] public partial string FormName { get; set; } = string.Empty;
@@ -798,11 +1189,49 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [ObservableProperty] public partial string FormPriceText { get; set; } = string.Empty;
     [ObservableProperty] public partial string FormStockText { get; set; } = string.Empty;
 
+    partial void OnSelectedCategoryChoiceChanged(string? value)
+    {
+        if (!IsEditing && !string.IsNullOrWhiteSpace(value) && !IsNewCategoryChoice(value))
+            FormCategory = value;
+        else if (!IsEditing && IsNewCategoryChoice(value))
+            FormCategory = string.Empty;
+    }
+
+    partial void OnSelectedMaterialChoiceChanged(string? value)
+    {
+        if (!IsEditing && !string.IsNullOrWhiteSpace(value) && !IsNewMaterialChoice(value))
+            FormName = value;
+        else if (!IsEditing && IsNewMaterialChoice(value))
+            FormName = string.Empty;
+    }
+
+    private static bool IsNewCategoryChoice(string? value) => value is CreateCategoryChoice or CreateCategoryChoiceKhmer;
+    private static bool IsNewMaterialChoice(string? value) => value is CreateMaterialChoice or CreateMaterialChoiceKhmer;
+
     private void LoadStock()
     {
         StockItems.Clear();
         foreach (var p in _db.SearchProducts(SearchText))
-            StockItems.Add(p);
+            StockItems.Add(ApplyProductLanguage(p));
+    }
+
+    private void LoadProductChoices()
+    {
+        CategoryChoices.Clear();
+        foreach (var category in _db.GetCategories().Select(c => c.Name)
+                     .Where(name => !string.IsNullOrWhiteSpace(name))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(name => name))
+            CategoryChoices.Add(category);
+        CategoryChoices.Add(IsKhmer ? CreateCategoryChoiceKhmer : CreateCategoryChoice);
+
+        MaterialChoices.Clear();
+        foreach (var material in _db.SearchProducts(null).Select(p => p.Name)
+                     .Where(name => !string.IsNullOrWhiteSpace(name))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(name => name))
+            MaterialChoices.Add(material);
+        MaterialChoices.Add(IsKhmer ? CreateMaterialChoiceKhmer : CreateMaterialChoice);
     }
 
     /// <summary>Resets the form fields (used by the drawer's "Clear" button).</summary>
@@ -810,6 +1239,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     private void NewProduct()
     {
         EditingProductId = 0;
+        LoadProductChoices();
+        SelectedCategoryChoice = IsKhmer ? CreateCategoryChoiceKhmer : CreateCategoryChoice;
+        SelectedMaterialChoice = IsKhmer ? CreateMaterialChoiceKhmer : CreateMaterialChoice;
         FormCategory = string.Empty;
         FormName = string.Empty;
         FormDimension = string.Empty;
@@ -817,7 +1249,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         FormSku = string.Empty;
         FormPriceText = string.Empty;
         FormStockText = string.Empty;
-        StockStatus = "Enter details for a new metal object.";
+        StockStatus = EnterDetailsText;
     }
 
     /// <summary>Opens the drawer with a blank form to create a new metal object.</summary>
@@ -838,6 +1270,9 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (product is null)
             return;
         EditingProductId = product.Id;
+        LoadProductChoices();
+        SelectedCategoryChoice = product.Category;
+        SelectedMaterialChoice = product.Name;
         FormCategory = product.Category;
         FormName = product.Name;
         FormDimension = product.Dimension;
@@ -936,6 +1371,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string OrdersSummary { get; set; } = "No sales yet.";
+
+    partial void OnOrdersSummaryChanged(string value) => OnPropertyChanged(nameof(OrdersSummaryDisplay));
 
     /// <summary>Filters the orders list by receipt number or customer name.</summary>
     [ObservableProperty]
@@ -1063,6 +1500,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string ReportProductSummary { get; set; } = string.Empty;
+
+    partial void OnReportProductSummaryChanged(string value) => OnPropertyChanged(nameof(ReportProductSummaryDisplay));
 
     /// <summary>Units-sold-per-type rows for the selected period.</summary>
     public ObservableCollection<ProductSalesRow> ReportProducts { get; } = new();

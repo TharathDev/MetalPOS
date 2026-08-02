@@ -84,6 +84,17 @@ public class DatabaseService
             Key   TEXT PRIMARY KEY,
             Value TEXT NOT NULL DEFAULT ''
         )",
+        @"CREATE TABLE IF NOT EXISTS Users (
+            Id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            Phone        TEXT NOT NULL UNIQUE,
+            PasswordSalt BLOB NOT NULL,
+            PasswordHash BLOB NOT NULL,
+            ShopId       TEXT NOT NULL DEFAULT '',
+            Role         TEXT NOT NULL DEFAULT 'Administrator',
+            IsActive     INTEGER NOT NULL DEFAULT 1,
+            CreatedAt    DATETIME NOT NULL,
+            FOREIGN KEY (ShopId) REFERENCES Shops(Id)
+        )",
         // No foreign key on ProductId: sale history must survive a product being
         // edited or deleted, so the description is copied onto the line instead.
         @"CREATE TABLE IF NOT EXISTS SaleItems (
@@ -109,6 +120,7 @@ public class DatabaseService
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_Sales_ReceiptNo ON Sales(ReceiptNo) WHERE ReceiptNo <> ''",
         "CREATE INDEX IF NOT EXISTS IX_SaleItems_SaleId ON SaleItems(SaleId)",
         "CREATE INDEX IF NOT EXISTS IX_Shops_RecoveryKey ON Shops(RecoveryKey)",
+        "CREATE INDEX IF NOT EXISTS IX_Users_ShopId ON Users(ShopId)",
     };
 
     /// <summary>
@@ -157,6 +169,7 @@ public class DatabaseService
         }
 
         SeedProductsIfEmpty(connection);
+        SeedAdministratorIfMissing(connection);
     }
 
     /// <summary>
@@ -187,6 +200,11 @@ public class DatabaseService
             ("Dimension", "TEXT NOT NULL DEFAULT ''"),
             ("Unit",      "TEXT NOT NULL DEFAULT 'ea'"),
             ("LineTotal", "REAL NOT NULL DEFAULT 0"),
+        });
+
+        AddMissingColumns(connection, "Users", new (string Name, string Definition)[]
+        {
+            ("ShopId", "TEXT NOT NULL DEFAULT ''"),
         });
 
         // Older rows stored only a total; treat it as the subtotal so the money
@@ -328,6 +346,149 @@ public class DatabaseService
             insert.ExecuteNonQuery();
         }
         transaction.Commit();
+    }
+
+    /// <summary>
+    /// Creates the initial administrator only when it does not already exist.
+    /// The database stores a PBKDF2 hash and salt, never a plaintext password.
+    /// </summary>
+    private static void SeedAdministratorIfMissing(SqliteConnection connection)
+    {
+        var shopId = EnsureCurrentShop(connection);
+        using var insert = connection.CreateCommand();
+        insert.CommandText = @"
+            INSERT OR IGNORE INTO Users (Phone, PasswordSalt, PasswordHash, ShopId, Role, IsActive, CreatedAt)
+            VALUES ($phone, $salt, $hash, $shopId, 'Administrator', 1, $createdAt);";
+        insert.Parameters.AddWithValue("$phone", "+855962201111");
+        insert.Parameters.AddWithValue("$salt", Convert.FromBase64String("zGQ72o4DNmjFW/GEbisVPQ=="));
+        insert.Parameters.AddWithValue("$hash", Convert.FromBase64String("GA8fUEHeHI0Kc4N0z2etDNGkhzzScIux2rbV0EuvA/g="));
+        insert.Parameters.AddWithValue("$shopId", shopId);
+        insert.Parameters.AddWithValue("$createdAt", DateTime.UtcNow);
+        insert.ExecuteNonQuery();
+
+        // Existing installations already have the admin row. Only fill a missing
+        // mapping; never move an administrator that is intentionally assigned.
+        using var mapAdmin = connection.CreateCommand();
+        mapAdmin.CommandText = @"
+            UPDATE Users SET ShopId = $shopId
+            WHERE Phone = $phone AND (ShopId IS NULL OR ShopId = '');";
+        mapAdmin.Parameters.AddWithValue("$shopId", shopId);
+        mapAdmin.Parameters.AddWithValue("$phone", "+855962201111");
+        mapAdmin.ExecuteNonQuery();
+    }
+
+    /// <summary>Gets the saved current shop, adopting an existing shop or creating the first one when needed.</summary>
+    private static string EnsureCurrentShop(SqliteConnection connection)
+    {
+        string? shopId = null;
+        using (var current = connection.CreateCommand())
+        {
+            current.CommandText = @"
+                SELECT Value FROM AppState WHERE Key = 'CurrentShopId' LIMIT 1;";
+            shopId = current.ExecuteScalar() as string;
+        }
+
+        if (!string.IsNullOrWhiteSpace(shopId) && ShopExists(connection, shopId))
+            return shopId;
+
+        using (var firstShop = connection.CreateCommand())
+        {
+            firstShop.CommandText = "SELECT Id FROM Shops ORDER BY CreatedAt, Id LIMIT 1;";
+            shopId = firstShop.ExecuteScalar() as string;
+        }
+
+        if (string.IsNullOrWhiteSpace(shopId))
+        {
+            shopId = Guid.NewGuid().ToString("N");
+            using var createShop = connection.CreateCommand();
+            createShop.CommandText = @"
+                INSERT INTO Shops (Id, Name, CreatedAt, UpdatedAt)
+                VALUES ($id, 'Main Shop', $createdAt, $updatedAt);";
+            createShop.Parameters.AddWithValue("$id", shopId);
+            createShop.Parameters.AddWithValue("$createdAt", DateTime.UtcNow);
+            createShop.Parameters.AddWithValue("$updatedAt", DateTime.UtcNow);
+            createShop.ExecuteNonQuery();
+        }
+
+        using var saveCurrent = connection.CreateCommand();
+        saveCurrent.CommandText = @"
+            INSERT INTO AppState (Key, Value) VALUES ('CurrentShopId', $shopId)
+            ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value;";
+        saveCurrent.Parameters.AddWithValue("$shopId", shopId);
+        saveCurrent.ExecuteNonQuery();
+        return shopId;
+    }
+
+    private static bool ShopExists(SqliteConnection connection, string shopId)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT 1 FROM Shops WHERE Id = $shopId LIMIT 1;";
+        command.Parameters.AddWithValue("$shopId", shopId);
+        return command.ExecuteScalar() is not null;
+    }
+
+    internal LoginCredential? GetLoginCredential(string phone)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+            SELECT PasswordSalt, PasswordHash, Role
+            FROM Users
+            WHERE Phone = $phone AND IsActive = 1
+            LIMIT 1;";
+        command.Parameters.AddWithValue("$phone", phone);
+
+        using var reader = command.ExecuteReader();
+        return reader.Read()
+            ? new LoginCredential((byte[])reader.GetValue(0), (byte[])reader.GetValue(1), reader.GetString(2))
+            : null;
+    }
+
+    internal List<UserAccount> GetUsers()
+    {
+        var users = new List<UserAccount>();
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Phone, Role FROM Users WHERE IsActive = 1 ORDER BY Id;";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            users.Add(new UserAccount(reader.GetString(0), reader.GetString(1)));
+        return users;
+    }
+
+    internal UserRegistrationResult RegisterUser(string requesterPhone, string phone, string password, string role)
+    {
+        if (!AuthService.IsPrimaryAdministrator(requesterPhone))
+            return UserRegistrationResult.NotAuthorized;
+
+        var (salt, hash) = PasswordHasher.Hash(password);
+        using var connection = OpenConnection();
+        var shopId = EnsureCurrentShop(connection);
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+            INSERT INTO Users (Phone, PasswordSalt, PasswordHash, ShopId, Role, IsActive, CreatedAt)
+            VALUES ($phone, $salt, $hash, $shopId, $role, 1, $createdAt);";
+        command.Parameters.AddWithValue("$phone", phone);
+        command.Parameters.AddWithValue("$salt", salt);
+        command.Parameters.AddWithValue("$hash", hash);
+        command.Parameters.AddWithValue("$shopId", shopId);
+        command.Parameters.AddWithValue("$role", role);
+        command.Parameters.AddWithValue("$createdAt", DateTime.UtcNow);
+
+        try
+        {
+            return command.ExecuteNonQuery() == 1
+                ? UserRegistrationResult.Success
+                : UserRegistrationResult.Failed;
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            return UserRegistrationResult.DuplicatePhone;
+        }
+        catch
+        {
+            return UserRegistrationResult.Failed;
+        }
     }
 
     // ==================== Inventory reads ====================
@@ -878,4 +1039,12 @@ public class DatabaseService
         Price = reader.GetDouble(6),
         Stock = reader.GetInt32(7),
     };
+}
+
+internal enum UserRegistrationResult
+{
+    Success,
+    DuplicatePhone,
+    NotAuthorized,
+    Failed,
 }

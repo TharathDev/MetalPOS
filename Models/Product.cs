@@ -30,6 +30,21 @@ public partial class Product : ObservableObject
 
     public int Stock { get; set; }
 
+    private bool _isKhmer;
+    public bool IsKhmer
+    {
+        get => _isKhmer;
+        set
+        {
+            if (_isKhmer == value)
+                return;
+            _isKhmer = value;
+            OnPropertyChanged(nameof(LocalizedUnit));
+            OnPropertyChanged(nameof(LocalizedStockLabel));
+            OnPropertyChanged(nameof(LocalizedStockDisplay));
+        }
+    }
+
     /// <summary>Quantity of this product currently present in the active cart.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsInCart))]
@@ -48,8 +63,31 @@ public partial class Product : ObservableObject
         ? "Standard"
         : $"Dimension: {Dimension}";
     public string StockLabel => $"Stock: {Stock} {Unit} available";
+    public string LocalizedUnit => IsKhmer ? Unit switch
+    {
+        "ea" => "ដុំ",
+        "sheet" => "សន្លឹក",
+        "ft" => "ហ្វីត",
+        "in" => "អ៊ីញ",
+        "box" => "ប្រអប់",
+        "pair" => "គូ",
+        "kg" => "គីឡូក្រាម",
+        "roll" => "រមូរ",
+        "mm" => "មីលីម៉ែត្រ",
+        "cm" => "សង់ទីម៉ែត្រ",
+        "dm" => "ដេស៊ីម៉ែត្រ",
+        "m" => "ម៉ែត្រ",
+        "cm²" => "សង់ទីម៉ែត្រការ៉េ",
+        "dm²" => "ដេស៊ីម៉ែត្រការ៉េ",
+        "m²" => "ម៉ែត្រការ៉េ",
+        _ => Unit,
+    } : Unit;
+    public string LocalizedStockLabel => IsKhmer
+        ? $"ស្តុក៖ {Stock} {LocalizedUnit} មាន"
+        : StockLabel;
     public string PriceLabel => $"${Price:0.00}";
     public string StockDisplay => $"{Stock} {Unit}";
+    public string LocalizedStockDisplay => IsKhmer ? $"{Stock} {LocalizedUnit}" : StockDisplay;
     public string SkuDisplay => string.IsNullOrWhiteSpace(Barcode) ? "-" : Barcode;
     public string CategoryDimensionLine => string.IsNullOrWhiteSpace(Dimension)
         ? Category

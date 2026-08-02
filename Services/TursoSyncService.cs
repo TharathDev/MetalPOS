@@ -190,7 +190,7 @@ public class TursoSyncService
         // Dropping rather than DELETEing guarantees the remote schema matches the
         // local one even after a local migration adds columns.
         var setup = new List<object> { Exec("BEGIN") };
-        foreach (var table in DatabaseService.BackupTables.Reverse())
+        foreach (var table in Enumerable.Reverse(DatabaseService.BackupTables))
             setup.Add(Exec($"DROP TABLE IF EXISTS {table}"));
         foreach (var stmt in DatabaseService.SchemaStatements)
             setup.Add(Exec(stmt));

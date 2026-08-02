@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PosApp.ViewModels"
+        x:Class="PosApp.Views.LoginWindow"
+        x:DataType="vm:LoginViewModel"
+        Width="460" Height="580" MinWidth="420" MinHeight="540"
+        CanResize="False" WindowStartupLocation="CenterScreen"
+        Background="#FFFFFF" Title="METALS_POS — Sign in">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Accent" Color="#C2410C" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#1F2937" />
+        <SolidColorBrush x:Key="TextMuted" Color="#6B7280" />
+        <SolidColorBrush x:Key="HairLine" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="Danger" Color="#DC2626" />
+    </Window.Resources>
+    <Window.Styles>
+        <Style Selector="TextBox.loginField">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="Button.loginPrimary">
+            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+    <Grid RowDefinitions="*,Auto">
+        <StackPanel Grid.Row="0" Margin="44,48,44,0" Spacing="18">
+            <StackPanel Spacing="5">
+                <TextBlock Text="METALS_POS" FontFamily="Consolas, Menlo, monospace" FontSize="25"
+                           FontWeight="Bold" LetterSpacing="1.5" Foreground="{StaticResource Accent}" />
+                <TextBlock Text="INVENTORY MANAGER" FontFamily="Consolas, Menlo, monospace" FontSize="11"
+                           LetterSpacing="1.2" Foreground="{StaticResource TextMuted}" />
+            </StackPanel>
+
+            <StackPanel Margin="0,24,0,0" Spacing="7">
+                <TextBlock Text="Welcome back" FontFamily="Georgia, serif" FontSize="28" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimary}" />
+                <TextBlock Text="Sign in with your Cambodian phone number to continue."
+                           FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="PHONE NUMBER" FontFamily="Consolas, Menlo, monospace" FontSize="11"
+                           FontWeight="Bold" LetterSpacing="1" Foreground="{StaticResource TextMuted}" />
+                <TextBox Classes="loginField" Text="{Binding PhoneNumber}"
+                         PlaceholderText="012 345 678 or +855 12 345 678" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+                <TextBlock Text="PASSWORD" FontFamily="Consolas, Menlo, monospace" FontSize="11"
+                           FontWeight="Bold" LetterSpacing="1" Foreground="{StaticResource TextMuted}" />
+                <TextBox Classes="loginField" Text="{Binding Password}" PasswordChar="●"
+                         PlaceholderText="Enter your password" />
+            </StackPanel>
+            <Border IsVisible="{Binding HasError}" Background="#FEF2F2" BorderBrush="#FECACA"
+                    BorderThickness="1" Padding="11,9">
+                <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{StaticResource Danger}" />
+            </Border>
+            <Button Classes="loginPrimary" Command="{Binding LoginCommand}" Content="Sign in" />
+        </StackPanel>
+        <Border Grid.Row="1" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
+                Padding="44,16">
+            <TextBlock Text="Cambodia numbers only · Passwords are stored only as secure hashes."
+                       FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" />
+        </Border>
+    </Grid>
+</Window>
