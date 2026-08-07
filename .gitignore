@@ -46,3 +46,6 @@ Receipts/
 turso_auth_token.txt
 *.token
 .env
+
+# Per-machine SDK pin - each developer keeps their own
+global.json
