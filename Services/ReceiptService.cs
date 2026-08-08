@@ -44,6 +44,7 @@ public class ReceiptRequest
     public string CustomerPhone { get; init; } = string.Empty;
     public string CustomerAddress { get; init; } = string.Empty;
     public string Note { get; init; } = string.Empty;
+    public string InvoiceFormat { get; init; } = "Detailed";
 
     // ----- Optional sales-confirmation header fields -----
     public string QuotationNo { get; init; } = string.Empty;
@@ -81,6 +82,7 @@ public class ReceiptRequest
         DeliveryAddress = sale.CustomerAddress,
         DeliveryContact = sale.CustomerPhone,
         Note = sale.Note,
+        InvoiceFormat = sale.InvoiceFormat,
     };
 }
 
@@ -106,7 +108,9 @@ public class ReceiptService
     {
         Directory.CreateDirectory(ReceiptsDirectory);
 
-        var html = BuildHtml(request);
+        var html = request.InvoiceFormat == "WalkIn"
+            ? BuildWalkInInvoiceHtml(request)
+            : BuildHtml(request);
 
         var number = string.IsNullOrWhiteSpace(request.ReceiptNo)
             ? request.SaleId.ToString("0000", CultureInfo.InvariantCulture)
@@ -381,6 +385,64 @@ public class ReceiptService
 
     private static string Encode(string? value) =>
         System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
+
+    /// <summary>
+    /// Compact counter invoice for walk-in customers. It deliberately avoids the
+    /// delivery and customer-detail blocks used by the full sales confirmation.
+    /// </summary>
+    private static string BuildWalkInInvoiceHtml(ReceiptRequest r)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var receiptNo = string.IsNullOrWhiteSpace(r.ReceiptNo)
+            ? r.SaleId.ToString("000000", inv)
+            : r.ReceiptNo;
+        var rows = new StringBuilder();
+        var index = 0;
+
+        foreach (var line in r.Lines)
+        {
+            index++;
+            rows.Append($@"<tr><td class=""no"">{index}</td><td>{Encode(line.Description)}</td><td class=""num"">{line.Quantity.ToString("N2", inv)}</td><td class=""num"">{line.UnitPrice.ToString("N2", inv)}</td><td class=""num"">{line.LineTotal.ToString("N2", inv)}</td></tr>");
+        }
+
+        for (var i = index; i < 15; i++)
+            rows.Append($@"<tr><td class=""no"">{i + 1}</td><td></td><td></td><td></td><td></td></tr>");
+
+        var discount = r.Discount > 0
+            ? $@"<tr><td>បញ្ចុះតម្លៃ <span>/ Discount</span></td><td>{r.Discount.ToString("N2", inv)}</td></tr>"
+            : string.Empty;
+        var tax = r.Tax > 0
+            ? $@"<tr><td>អាករ <span>/ Tax</span></td><td>{r.Tax.ToString("N2", inv)}</td></tr>"
+            : string.Empty;
+        var note = string.IsNullOrWhiteSpace(r.Note)
+            ? string.Empty
+            : $"<b>Note:</b> {Encode(r.Note)}";
+
+        return $@"<!DOCTYPE html>
+<html lang=""km""><head><meta charset=""utf-8"" />
+<title>Invoice {Encode(receiptNo)}</title>
+<style>
+ :root {{ --khmer:'Khmer OS Battambang','Khmer OS','Khmer MN','Noto Sans Khmer',sans-serif; }}
+ * {{ box-sizing:border-box; }} body {{ margin:0; padding:18px; background:#f3f4f6; color:#111; font-family:var(--khmer); font-size:12px; }}
+ .sheet {{ width:760px; min-height:980px; margin:auto; padding:18px 20px; background:#fff; border:1px solid #aaa; }}
+ .head {{ display:grid; grid-template-columns:1fr auto 1fr; align-items:end; min-height:84px; border-bottom:1px solid #111; padding-bottom:10px; }}
+ .title {{ text-align:center; font-weight:bold; line-height:1.15; }} .title .km {{ font-size:21px; }} .title .en {{ font-family:Arial,sans-serif; font-size:15px; letter-spacing:1px; }}
+ .invoice-no {{ text-align:right; font-family:Arial,sans-serif; }} .invoice-no b {{ color:#8b1d1d; font-size:17px; }}
+ .date {{ display:flex; justify-content:flex-end; gap:4px; margin-top:11px; }} .line {{ display:inline-block; min-width:150px; border-bottom:1px dotted #333; text-align:center; }}
+ table {{ border-collapse:collapse; width:100%; }} .items {{ margin-top:16px; }} .items th,.items td {{ border:1px solid #222; height:27px; padding:4px 6px; }} .items th {{ height:44px; text-align:center; line-height:1.1; font-weight:bold; }}
+ .items th span,.totals span {{ font-family:Arial,sans-serif; font-size:10px; }} .no {{ text-align:center; width:42px; }} .num {{ text-align:right; font-family:Arial,sans-serif; }}
+ .bottom {{ display:grid; grid-template-columns:1.45fr 1fr; }} .terms {{ border:1px solid #222; border-top:0; padding:12px 10px; line-height:1.9; min-height:116px; }} .totals td {{ border:1px solid #222; border-top:0; padding:5px 8px; height:28px; }} .totals td:last-child {{ width:112px; text-align:right; font-family:Arial,sans-serif; font-weight:bold; }} .grand td {{ font-weight:bold; background:#f4f4f4; }}
+ .signatures {{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:44px; text-align:center; }} .sigline {{ border-top:1px dotted #222; margin-bottom:7px; }}
+ .btn {{ display:block; width:760px; margin:14px auto; padding:10px; border:0; background:#c2410c; color:#fff; font-size:14px; }}
+ @media print {{ @page {{ size:A4 portrait; margin:10mm; }} body {{ padding:0; background:#fff; }} .sheet {{ width:auto; min-height:0; border:0; padding:0; }} .noprint {{ display:none; }} }}
+</style></head><body onload=""setTimeout(function(){{ window.print(); }},300)""><div class=""sheet"">
+ <div class=""head""><div></div><div class=""title""><div class=""km"">វិក្កយបត្រ</div><div class=""en"">INVOICE</div></div><div class=""invoice-no"">No. <b>{Encode(receiptNo)}</b></div></div>
+ <div class=""date"">កាលបរិច្ឆេទ / Date: <span class=""line"">{r.Timestamp:dd-MM-yyyy}</span></div>
+ <table class=""items""><thead><tr><th style=""width:42px"">ល.រ<br><span>No.</span></th><th>បរិយាយមុខទំនិញ<br><span>Name of Goods</span></th><th style=""width:84px"">ចំនួន<br><span>Quantity</span></th><th style=""width:105px"">តម្លៃឯកតា<br><span>Unit Price</span></th><th style=""width:112px"">ទឹកប្រាក់<br><span>Amount</span></th></tr></thead><tbody>{rows}</tbody></table>
+ <div class=""bottom""><div class=""terms"">• ទំនិញដែលបានលក់ហើយ មិនអាចប្តូរវិញបានទេ។<br>• <span>Goods sold are not returnable.</span><br>{note}</div><table class=""totals""><tbody><tr><td>សរុប <span>/ Total</span></td><td>{r.Subtotal.ToString("N2", inv)}</td></tr>{discount}{tax}<tr class=""grand""><td>ទឹកប្រាក់សរុប <span>/ GRAND TOTAL</span></td><td>{r.Total.ToString("N2", inv)}</td></tr><tr><td>បានបង់ <span>/ Paid</span></td><td>{r.AmountPaid.ToString("N2", inv)}</td></tr></tbody></table></div>
+ <div class=""signatures""><div><div class=""sigline""></div>អ្នកលក់<br><span>Seller</span></div><div><div class=""sigline""></div>អ្នកទិញ<br><span>Buyer</span></div><div><div class=""sigline""></div>អ្នកដឹក<br><span>Driver</span></div><div><div class=""sigline""></div>អ្នកទទួល<br><span>Receiver</span></div></div>
+ </div><button class=""btn noprint"" onclick=""window.print()"">បោះពុម្ព / Print</button></body></html>";
+    }
 
     private static void TryOpen(string path)
     {

@@ -19,6 +19,10 @@ public partial class CategoryInfo : ObservableObject
     [ObservableProperty]
     public partial double CardWidth { get; set; } = 240;
 
+    /// <summary>True while this category is the active filter pill on the catalog grid.</summary>
+    [ObservableProperty]
+    public partial bool IsFilterActive { get; set; }
+
     /// <summary>Total units of stock across all products in this category.</summary>
     public int TotalStock { get; init; }
 

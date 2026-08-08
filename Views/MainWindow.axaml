@@ -11,7 +11,8 @@
         Icon="/Assets/avalonia-logo.ico"
         Width="1200" Height="820"
         MinWidth="1040" MinHeight="680"
-        Background="White"
+        Background="{StaticResource Bg}"
+        FontFamily="{StaticResource BodyFont}"
         Title="METALS_POS - Inventory Manager">
 
     <Design.DataContext>
@@ -20,96 +21,108 @@
 
     <!-- ================= Resources ================= -->
     <Window.Resources>
-        <SolidColorBrush x:Key="Accent" Color="#C2410C" />
-        <SolidColorBrush x:Key="AccentDark" Color="#9A3412" />
-        <SolidColorBrush x:Key="TextPrimary" Color="#1F2937" />
-        <SolidColorBrush x:Key="TextMuted" Color="#6B7280" />
-        <SolidColorBrush x:Key="TextFaint" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="HairLine" Color="#E5E7EB" />
-        <SolidColorBrush x:Key="Danger" Color="#DC2626" />
-        <SolidColorBrush x:Key="PeachTile" Color="#FBE3D3" />
-        <SolidColorBrush x:Key="BlueTile" Color="#E6ECF4" />
-        <SolidColorBrush x:Key="ChipBg" Color="#F3F4F6" />
-        <SolidColorBrush x:Key="LavenderPill" Color="#ECEBFB" />
-        <SolidColorBrush x:Key="LavenderText" Color="#5B54C9" />
+        <!-- ===== Classical design tokens =====
+             Warm-gray ground, gold accent, ink-warm text. Ported from the
+             imported "Classical" design system (Metals POS.dc.html). -->
+        <SolidColorBrush x:Key="Bg" Color="#F3F2F2" />
+        <SolidColorBrush x:Key="Surface" Color="#EAE9E9" />
+        <SolidColorBrush x:Key="Accent" Color="#B68235" />
+        <SolidColorBrush x:Key="AccentDark" Color="#7D5411" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#201F1D" />
+        <SolidColorBrush x:Key="TextMuted" Color="#7C7A78" />
+        <SolidColorBrush x:Key="TextFaint" Color="#9A9895" />
+        <SolidColorBrush x:Key="HairLine" Color="#D2D1CF" />
+        <SolidColorBrush x:Key="Danger" Color="#B23B2E" />
+        <SolidColorBrush x:Key="PeachTile" Color="#FFF3E4" />
+        <SolidColorBrush x:Key="BlueTile" Color="#EAE9E9" />
+        <SolidColorBrush x:Key="ChipBg" Color="#EAE9E9" />
+        <SolidColorBrush x:Key="LavenderPill" Color="#FFF3E4" />
+        <SolidColorBrush x:Key="LavenderText" Color="#7D5411" />
 
         <!-- Selected dimension row highlight (compares ListBoxItem.IsSelected to True) -->
-        <conv:EqualityToBrushConverter x:Key="RowBg" TrueBrush="#FDF3EE" FalseBrush="White" />
-        <conv:EqualityToBrushConverter x:Key="RowBorder" TrueBrush="#C2410C" FalseBrush="#E5E7EB" />
+        <conv:EqualityToBrushConverter x:Key="RowBg" TrueBrush="#FFF3E4" FalseBrush="Transparent" />
+        <conv:EqualityToBrushConverter x:Key="RowBorder" TrueBrush="#B68235" FalseBrush="#D2D1CF" />
 
         <!-- ===== Input chrome overrides =====
              The stock Fluent theme fills text inputs with a grey wash and uses a
              thick blue focus underline. These keep inputs flat white with square
              corners and an accent focus border, matching the rest of the UI. -->
-        <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+        <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
 
-        <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" Opacity="0" />
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFFFFF" Opacity="0" />
+        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" Opacity="0" />
+        <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#EAE9E9" />
 
-        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#D1D5DB" />
-        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#C2410C" />
-        <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#D2D1CF" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#9A9895" />
+        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B68235" />
+        <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#D2D1CF" />
 
-        <SolidColorBrush x:Key="TextControlForeground" Color="#1F2937" />
-        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#1F2937" />
-        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#1F2937" />
+        <SolidColorBrush x:Key="TextControlForeground" Color="#201F1D" />
+        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#201F1D" />
+        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#201F1D" />
 
-        <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#B6BCC6" />
+        <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9A9895" />
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#9A9895" />
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#B0AEAB" />
 
-        <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#C2410C" />
+        <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#B68235" />
         <!-- Fluent thickens the bottom edge on focus; keep it an even 1px box. -->
         <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
         <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
 
         <!-- ComboBox chrome -->
-        <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#FAFAFA" />
-        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F3F4F6" />
-        <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F3F4F6" />
-        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#D1D5DB" />
-        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#C2410C" />
-        <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#C2410C" />
-        <SolidColorBrush x:Key="ComboBoxForeground" Color="#1F2937" />
-        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#E5E7EB" />
-        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#FDF3EE" />
-        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#FBE3D3" />
-        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#1F2937" />
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" Opacity="0" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#201F1D" Opacity="0.06" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#201F1D" Opacity="0.1" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#FFFFFF" Opacity="0" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#EAE9E9" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#D2D1CF" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#9A9895" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#B68235" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushFocused" Color="#B68235" />
+        <SolidColorBrush x:Key="ComboBoxForeground" Color="#201F1D" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#EAE9E9" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#D2D1CF" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#FFF3E4" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#FFE3BF" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#201F1D" />
     </Window.Resources>
 
     <!-- ================= Styles ================= -->
     <Window.Styles>
+        <!-- Classical drops monospace: kickers/labels become tracked uppercase serif. -->
         <Style Selector="TextBlock.mono">
-            <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
-            <Setter Property="LetterSpacing" Value="1.2" />
+            <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+            <Setter Property="LetterSpacing" Value="0.8" />
         </Style>
         <Style Selector="TextBlock.h1">
-            <Setter Property="FontFamily" Value="Georgia, serif" />
-            <Setter Property="FontSize" Value="30" />
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+            <Setter Property="FontSize" Value="40" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
         </Style>
         <Style Selector="TextBlock.cardTitle">
-            <Setter Property="FontFamily" Value="Georgia, serif" />
-            <Setter Property="FontSize" Value="21" />
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
         </Style>
 
         <!-- Line-icon defaults -->
         <Style Selector="Path.icon">
             <Setter Property="Stretch" Value="Uniform" />
-            <Setter Property="StrokeThickness" Value="1.7" />
+            <Setter Property="StrokeThickness" Value="1.9" />
             <Setter Property="StrokeLineCap" Value="Round" />
             <Setter Property="StrokeJoin" Value="Round" />
             <Setter Property="Stroke" Value="{StaticResource TextMuted}" />
+            <!-- A Shape with an explicit Width/Height still defaults to Stretch
+                 alignment, which is not reliably centered inside a fixed-size
+                 container (Border icon boxes, pills, etc.) - pin it explicitly so
+                 every icon centers the same way everywhere it's used. -->
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <!-- Sidebar nav buttons -->
@@ -119,41 +132,50 @@
             <Setter Property="Padding" Value="10,9" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
-            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontSize" Value="14" />
         </Style>
         <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#F3F4F6" />
+            <Setter Property="Background" Value="#12000000" />
         </Style>
         <Style Selector="Button.nav.active">
-            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource AccentDark}" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
+        <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource PeachTile}" />
+        </Style>
 
-        <!-- Accent (primary) buttons -->
+        <!-- Accent (primary) buttons — classical: outlined gold, not a solid block. -->
         <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{StaticResource Accent}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="16,13" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
         <!-- Pin the chrome for every state so no theme variant can recolor it. -->
         <Style Selector="Button.primary /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource Accent}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="TextBlock.Foreground" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="TextBlock.Foreground" Value="{StaticResource Accent}" />
         </Style>
         <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+            <Setter Property="Background" Value="#22B68235" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         </Style>
         <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+            <Setter Property="Background" Value="#3AB68235" />
         </Style>
         <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#E3B9A6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#D8C6A6" />
         </Style>
 
         <!-- ===== Smooth interactions: fade hover colors, subtle press + card lift ===== -->
@@ -181,29 +203,61 @@
 
         <!-- Header pills -->
         <Style Selector="Button.pill">
-            <Setter Property="Background" Value="{StaticResource ChipBg}" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="12,8" />
         </Style>
         <Style Selector="Button.pill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#E5E7EB" />
+            <Setter Property="Background" Value="#12000000" />
+        </Style>
+
+        <!-- Category filter pills (rounded-full) shown above the catalog product grid -->
+        <Style Selector="Button.categoryPill">
+            <Setter Property="Background" Value="{StaticResource Surface}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+        <Style Selector="Button.categoryPill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#12000000" />
+        </Style>
+        <Style Selector="Button.categoryPill.active">
+            <Setter Property="Foreground" Value="{StaticResource AccentDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+        <Style Selector="Button.categoryPill.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource PeachTile}" />
+        </Style>
+        <Style Selector="Button.categoryPillDashed">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+        <Style Selector="Button.categoryPillDashed:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#12000000" />
         </Style>
 
         <!-- Category card buttons -->
         <Style Selector="Button.categoryCard">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="{StaticResource Surface}" />
             <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="7" />
             <Setter Property="Padding" Value="18" />
             <Setter Property="MinHeight" Value="228" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.categoryCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FFF9F5" />
+            <Setter Property="Background" Value="#FFFBF3" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         </Style>
         <!-- Cards gently lift on hover for a smooth, tactile feel. -->
@@ -219,18 +273,49 @@
             <Setter Property="RenderTransform" Value="translateY(-3px)" />
         </Style>
 
-        <!-- Quick-action rows -->
-        <Style Selector="Button.quickAction">
-            <Setter Property="Background" Value="White" />
+        <!-- Catalog product card: same card look as categoryCard but content-sized
+             (no MinHeight / no fixed Height) so every tile in the grid ends up the
+             exact same height without a big dead gap. -->
+        <Style Selector="Button.productCard">
+            <Setter Property="Background" Value="{StaticResource Surface}" />
             <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Padding" Value="16" />
+            <!-- A definite height keeps every tile identical AND gives the grid a
+                 deterministic total height so the page scrolls all the way down. -->
+            <Setter Property="Height" Value="172" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.productCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FFFBF3" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+        <Style Selector="Button.productCard:pointerover">
+            <Setter Property="RenderTransform" Value="translateY(-3px)" />
+        </Style>
+
+        <!-- Quick-action rows -->
+        <Style Selector="Button.quickAction">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="12,11" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.quickAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="Background" Value="#12000000" />
         </Style>
 
         <!-- Transparent button (icon buttons, tab click surface, scrim) -->
@@ -250,7 +335,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="10,9" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -258,7 +343,7 @@
         </Style>
         <Style Selector="Button.settingsTab.active">
             <Setter Property="Background" Value="{StaticResource PeachTile}" />
-            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource AccentDark}" />
             <Setter Property="BorderBrush" Value="Transparent" />
         </Style>
 
@@ -294,29 +379,18 @@
             <Setter Property="RenderTransform" Value="translateX(0)" />
         </Style>
 
-        <!-- Cart drawer slides in from the left -->
-        <Style Selector="Border.drawerLeft">
-            <Setter Property="RenderTransform" Value="translateX(-640px)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Border.drawerLeft.open">
-            <Setter Property="RenderTransform" Value="translateX(0)" />
-        </Style>
-
         <!-- Small per-row ADD TO CART button -->
         <Style Selector="Button.rowAdd">
-            <Setter Property="Background" Value="{StaticResource Accent}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="12,7" />
         </Style>
         <Style Selector="Button.rowAdd:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+            <Setter Property="Background" Value="#22B68235" />
         </Style>
 
         <!-- Compact quantity stepper shown once a row is in the cart. Kept visually
@@ -381,21 +455,21 @@
 
         <!-- Text inputs / combos: flat white, square, accent focus ring -->
         <Style Selector="TextBox.field">
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="MinHeight" Value="0" />
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
         <!-- Style the template border directly so the chrome can't be re-filled
              by theme-variant resources. -->
         <Style Selector="TextBox.field /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="CubicEaseOut" />
@@ -403,62 +477,77 @@
             </Setter>
         </Style>
         <Style Selector="TextBox.field:pointerover /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#9CA3AF" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#9A9895" />
         </Style>
         <Style Selector="TextBox.field:focus /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         </Style>
         <Style Selector="TextBox.field:focus-within /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         </Style>
 
         <Style Selector="ComboBox.field">
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="MinHeight" Value="0" />
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
 
         <!-- Secondary (ghost) button -->
         <Style Selector="Button.ghost">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="12,9" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#F3F4F6" />
+            <Setter Property="Background" Value="#12000000" />
+        </Style>
+
+        <!-- Secondary (outlined) button — used for Sign out etc. -->
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="14,9" />
+            <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+        </Style>
+        <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#12000000" />
         </Style>
 
         <!-- Small icon action button (edit/delete rows) -->
         <Style Selector="Button.iconBtn">
-            <Setter Property="Background" Value="{StaticResource ChipBg}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="7" />
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
         </Style>
         <Style Selector="Button.iconBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#E5E7EB" />
+            <Setter Property="Background" Value="#12000000" />
         </Style>
 
         <!-- Segmented period toggle (Daily / Weekly / Monthly) -->
         <Style Selector="Button.segbtn">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="0" />
@@ -467,28 +556,29 @@
             <Setter Property="FontSize" Value="13" />
         </Style>
         <Style Selector="Button.segbtn /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="Button.segbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#F3F4F6" />
+            <Setter Property="Background" Value="#12000000" />
         </Style>
         <Style Selector="Button.segbtn.on">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource AccentDark}" />
         </Style>
         <Style Selector="Button.segbtn.on /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource Accent}" />
+            <Setter Property="Background" Value="{StaticResource PeachTile}" />
         </Style>
         <Style Selector="Button.segbtn.on:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource AccentDark}" />
+            <Setter Property="Background" Value="{StaticResource PeachTile}" />
         </Style>
 
         <!-- Report summary stat card -->
         <Style Selector="Border.statCard">
-            <Setter Property="Background" Value="White" />
+            <Setter Property="Background" Value="{StaticResource Surface}" />
             <Setter Property="BorderBrush" Value="{StaticResource HairLine}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="7" />
             <Setter Property="Padding" Value="18,16" />
+            <Setter Property="BoxShadow" Value="0 1 2 0 #24201F1D" />
         </Style>
 
         <!-- Table header cell -->
@@ -497,13 +587,43 @@
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
         </Style>
+
+        <!-- Search box: the whole pill highlights in accent on focus. The inner
+             TextBox's own border/underline is fully suppressed so it doesn't draw
+             a second box inside the pill. -->
+        <Style Selector="Border.searchBox">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.searchBox:focus-within">
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        </Style>
+        <Style Selector="TextBox.searchInput /template/ Border#PART_BorderElement">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBox.searchInput:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBox.searchInput:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBox.searchInput:focus-within /template/ Border#PART_BorderElement">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
     </Window.Styles>
 
     <!-- ================= Layout ================= -->
     <Grid ColumnDefinitions="248,*">
 
         <!-- ===== Sidebar ===== -->
-        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="Transparent" BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0">
             <DockPanel Margin="18,20">
                 <!-- Logo -->
                 <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="6,0,0,26">
@@ -513,26 +633,17 @@
                                Foreground="{StaticResource TextFaint}" />
                 </StackPanel>
 
-                <!-- Bottom block: cart button with live item-count badge -->
-                <StackPanel DockPanel.Dock="Bottom" Spacing="12">
-                    <Border Height="1" Background="{StaticResource HairLine}" Margin="0,0,0,4" />
-                    <Button Classes="primary" Command="{Binding ToggleCartDrawerCommand}"
-                            ToolTip.Tip="View cart and check out">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Path Grid.Column="0" Classes="icon" Width="18" Height="18" Stroke="White"
-                                  Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
-                            <TextBlock Grid.Column="1" Classes="mono" Text="CART" FontWeight="Bold"
-                                       VerticalAlignment="Center" Margin="10,0,0,0" />
-                            <!-- Badge showing the number of items currently in the cart -->
-                            <Border Grid.Column="2" MinWidth="22" Height="22" CornerRadius="11"
-                                    Background="White" IsVisible="{Binding HasCartBadge}"
-                                    VerticalAlignment="Center" Padding="6,0">
-                                <TextBlock Text="{Binding CartItemCount}" Classes="mono" FontSize="11"
-                                           FontWeight="Bold" Foreground="{StaticResource Accent}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                        </Grid>
-                    </Button>
+                <!-- Bottom block: live-inventory status tag (matches design mock) -->
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Border BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="3"
+                            Padding="10,6" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="icon" Width="13" Height="13" Stroke="{StaticResource Accent}"
+                                  Data="M13 3 L6 14 H11 L10 21 L18 9 H13 Z" />
+                            <TextBlock Text="{Binding LiveInventoryText}" FontSize="11"
+                                       Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- Nav items -->
@@ -581,13 +692,14 @@
                     Padding="24,14">
                 <Grid ColumnDefinitions="*,Auto,Auto">
                     <!-- Search -->
-                    <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource HairLine}"
-                            BorderThickness="1" CornerRadius="10" Padding="12,0" MaxWidth="620"
+                    <Border Grid.Column="0" Classes="searchBox" Background="Transparent"
+                            BorderBrush="{StaticResource HairLine}"
+                            BorderThickness="1" CornerRadius="4" Padding="12,0" MaxWidth="620"
                             HorizontalAlignment="Stretch">
                         <Grid ColumnDefinitions="Auto,*" Height="42">
                             <Path Grid.Column="0" Classes="icon" Width="17" Height="17" Margin="2,0,10,0"
                                   Data="M10 4 a6 6 0 1 0 0.01 0 M15 15 L20 20" />
-                            <TextBox Grid.Column="1" Text="{Binding SearchText}"
+                            <TextBox Grid.Column="1" Classes="searchInput" Text="{Binding SearchText}"
                                      PlaceholderText="{Binding SearchMaterialsPlaceholder}"
                                      BorderThickness="0" Background="Transparent" VerticalAlignment="Center"
                                      VerticalContentAlignment="Center" FontSize="14" Padding="0" />
@@ -598,7 +710,7 @@
                     <Panel Grid.Column="1" Margin="22,0,20,0" VerticalAlignment="Center" Width="24" Height="24">
                         <Path Classes="icon" Width="22" Height="22"
                               Data="M12 4 C9 4 8 6 8 9 C8 13 6 15 6 15 H18 C18 15 16 13 16 9 C16 6 15 4 12 4 Z M10 18 a2 2 0 0 0 4 0" />
-                        <Ellipse Width="7" Height="7" Fill="{StaticResource Accent}" Stroke="White" StrokeThickness="1.2"
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource Accent}" Stroke="{StaticResource Bg}" StrokeThickness="1.2"
                                  HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-1,-1,0" />
                     </Panel>
 
@@ -637,15 +749,6 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
-                                <Button Classes="pill" Command="{Binding BackupNowCommand}"
-                                        ToolTip.Tip="{Binding BackupStatus}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Path Classes="icon" Width="15" Height="15"
-                                              Data="M6 16 a4 4 0 0 1 1 -7.9 A5 5 0 0 1 17 8 a3.5 3.5 0 0 1 -0.5 7 H7 M12 9 V15 M9.5 12.5 L12 15 L14.5 12.5" />
-                                        <TextBlock Classes="mono" Text="{Binding SyncLabel}" FontSize="11"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Button>
                                 <Button Classes="pill" Background="{StaticResource LavenderPill}"
                                         Foreground="{StaticResource LavenderText}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -659,113 +762,106 @@
                         </Grid>
 
                         <!-- ============ INVENTORY SECTION ============ -->
-                        <StackPanel IsVisible="{Binding IsInventorySection}" Margin="0,24,0,0">
-                            <ListBox ItemsSource="{Binding Categories}" Margin="-8,-8,-8,0"
-                                     VerticalAlignment="Top" Background="Transparent" BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                                <!-- ListBoxItem is a concrete container, allowing every generated
-                                     tile to fill its equal-width UniformGrid cell exactly. -->
-                                <ListBox.Styles>
-                                    <Style Selector="ListBoxItem">
-                                        <Setter Property="Padding" Value="0" />
-                                        <Setter Property="Margin" Value="0" />
-                                        <Setter Property="Background" Value="Transparent" />
-                                        <Setter Property="BorderThickness" Value="0" />
-                                        <Setter Property="HorizontalAlignment" Value="Stretch" />
-                                        <Setter Property="VerticalAlignment" Value="Top" />
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                        <Setter Property="VerticalContentAlignment" Value="Top" />
-                                    </Style>
-                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="Transparent" />
-                                    </Style>
-                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-                                        <Setter Property="Background" Value="Transparent" />
-                                    </Style>
-                                </ListBox.Styles>
-                                <ListBox.ItemsPanel>
+                        <StackPanel IsVisible="{Binding IsInventorySection}" Margin="0,24,0,0" Spacing="18">
+
+                            <!-- ===== Category filter row: small pills, not big tiles ===== -->
+                            <ItemsControl ItemsSource="{Binding Categories}">
+                                <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <UniformGrid Columns="{Binding CategoryColumns}"
-                                                     Rows="0" VerticalAlignment="Top" />
+                                        <WrapPanel Orientation="Horizontal" />
                                     </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:CategoryInfo">
-                                        <Grid>
-                                            <!-- Standard category tile -->
-                                            <Button Classes="categoryCard" Margin="8" Height="200"
-                                                    Width="{Binding CardWidth}"
-                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                        <Grid Margin="0,0,10,10">
+                                            <!-- Category filter pill: toggles the product grid below -->
+                                            <Button Classes="categoryPill" Classes.active="{Binding IsFilterActive}"
                                                     IsVisible="{Binding !IsCustom}"
-                                                    Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).SelectCategoryCommand}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).ToggleCategoryFilterCommand}"
                                                     CommandParameter="{Binding Name}">
-                                                <Grid RowDefinitions="Auto,*,Auto">
-                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                                                        <Border Width="52" Height="52" CornerRadius="12"
-                                                                Background="{StaticResource PeachTile}">
-                                                            <Path Classes="icon" Width="24" Height="24"
-                                                                  Stroke="{StaticResource Accent}"
-                                                                  Data="M12 3 L20 7 L12 11 L4 7 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17" />
-                                                        </Border>
-                                                        <Border Grid.Column="2" VerticalAlignment="Top"
-                                                                Background="{StaticResource ChipBg}"
-                                                                CornerRadius="6" Padding="8,4">
-                                                            <TextBlock Classes="mono" Text="{Binding SkuLabel}" FontSize="11"
-                                                                       Foreground="{StaticResource TextMuted}" />
-                                                        </Border>
-                                                    </Grid>
-                                                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,14,0,0">
-                                                        <TextBlock Classes="cardTitle" Text="{Binding Name}" />
-                                                        <TextBlock Text="{Binding Description}" FontSize="13"
-                                                                   Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                    <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}"
-                                                            BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,14,0,0">
-                                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                                            <Path Classes="icon" Width="15" Height="15"
-                                                                  Data="M4 12 H10 V20 H4 Z M14 4 H20 V20 H14 Z" />
-                                                            <TextBlock Text="{Binding StockLine}" FontSize="12"
-                                                                       Foreground="{StaticResource TextMuted}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                </Grid>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Classes="icon" Width="15" Height="15"
+                                                          Data="M12 3 L20 7 L12 11 L4 7 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17" />
+                                                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding SkuLabel}" FontSize="11" Opacity="0.7"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
                                             </Button>
 
-                                            <!-- Custom object action occupies a normal grid cell. -->
-                                            <Button Classes="categoryCard" Margin="8" Height="200"
-                                                    Width="{Binding CardWidth}"
-                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
-                                                    IsVisible="{Binding IsCustom}"
-                                                    Background="Transparent" BorderThickness="0" Padding="0"
-                                                    Command="{Binding $parent[ListBox].((vm:MaterialSelectionViewModel)DataContext).AddCustomCategoryCommand}">
-                                                <Grid>
-                                                    <Rectangle RadiusX="12" RadiusY="12" Fill="#F8F8F9"
-                                                               Stroke="#D1D5DB" StrokeThickness="1.5"
-                                                               StrokeDashArray="4,3" />
-                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                                Spacing="12" Margin="20">
-                                                        <Border Width="48" Height="48" CornerRadius="12" Background="White"
-                                                                BorderBrush="{StaticResource HairLine}" BorderThickness="1">
-                                                            <Path Classes="icon" Width="20" Height="20"
-                                                                  Stroke="{StaticResource TextMuted}"
-                                                                  Data="M12 5 V19 M5 12 H19" />
-                                                        </Border>
-                                                        <TextBlock Text="Add Custom Object" FontSize="14"
-                                                                   FontWeight="SemiBold" TextAlignment="Center"
-                                                                   Foreground="{StaticResource TextPrimary}" />
-                                                        <TextBlock Text="{Binding Description}" FontSize="12"
-                                                                   TextAlignment="Center" TextWrapping="Wrap"
-                                                                   Foreground="{StaticResource TextMuted}" />
-                                                    </StackPanel>
-                                                </Grid>
+                                            <!-- Dashed "+ Add Custom Object" pill -->
+                                            <Button Classes="categoryPillDashed" IsVisible="{Binding IsCustom}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).AddCustomCategoryCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Classes="icon" Width="14" Height="14"
+                                                          Data="M12 5 V19 M5 12 H19" />
+                                                    <TextBlock Text="Add Custom Object" FontSize="13" VerticalAlignment="Center" />
+                                                </StackPanel>
                                             </Button>
                                         </Grid>
                                     </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- ===== Flat product grid: every SKU, filtered by pill + search ===== -->
+                            <TextBlock Text="{Binding CatalogSummaryText}" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <ItemsControl ItemsSource="{Binding CatalogItems}" Margin="-8,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="{Binding CategoryColumns}" Rows="0"
+                                                     VerticalAlignment="Top" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:Product">
+                                        <Button Classes="productCard" Margin="8"
+                                                Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).OpenProductQuickAddCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Grid RowDefinitions="Auto,*,Auto">
+                                                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                                    <Border Width="40" Height="40" CornerRadius="7"
+                                                            Background="{StaticResource PeachTile}">
+                                                        <Path Classes="icon" Width="19" Height="19"
+                                                              Stroke="{StaticResource Accent}"
+                                                              Data="M12 3 L20 7 L12 11 L4 7 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17" />
+                                                    </Border>
+                                                    <Border Grid.Column="2" VerticalAlignment="Top"
+                                                            Background="{StaticResource ChipBg}" CornerRadius="6"
+                                                            Padding="8,4">
+                                                        <TextBlock Classes="mono" FontSize="10"
+                                                                   Text="{Binding Category}"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                    </Border>
+                                                </Grid>
+                                                <StackPanel Grid.Row="1" Spacing="2" Margin="0,12,0,0"
+                                                            VerticalAlignment="Top">
+                                                    <TextBlock Text="{Binding Name}" FontSize="15"
+                                                               FontFamily="{StaticResource HeadingFont}"
+                                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                               Foreground="{StaticResource TextPrimary}" />
+                                                    <TextBlock Text="{Binding DimensionLabel}" FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="{StaticResource TextMuted}" />
+                                                </StackPanel>
+                                                <Border Grid.Row="2" BorderBrush="{StaticResource HairLine}"
+                                                        BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Grid.Column="0" Text="{Binding PriceLabel}"
+                                                                   FontSize="16" FontWeight="Bold"
+                                                                   FontFamily="{StaticResource HeadingFont}"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding LocalizedStockDisplay}"
+                                                                   FontSize="12" VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextMuted}" />
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
 
                         <!-- ============ STOCK MANAGEMENT SECTION ============ -->
@@ -779,7 +875,7 @@
                                 <Button Grid.Column="1" Classes="primary" Padding="14,10"
                                         Command="{Binding OpenAddProductCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Path Classes="icon" Width="16" Height="16" Stroke="White"
+                                        <Path Classes="icon" Width="16" Height="16" Stroke="{StaticResource Accent}"
                                               Data="M12 5 V19 M5 12 H19" />
                                         <TextBlock Classes="mono" Text="{Binding AddItemText}" FontWeight="Bold"
                                                    VerticalAlignment="Center" />
@@ -789,10 +885,10 @@
 
                             <!-- Stock table -->
                             <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                    CornerRadius="12" Padding="0">
+                                    CornerRadius="7" Padding="0">
                                 <DockPanel>
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,90,70,80,84"
-                                          Background="#FAFAFA" Height="40">
+                                          Background="#EDECEB" Height="40">
                                         <TextBlock Classes="th" Text="{Binding StockItemText}" VerticalAlignment="Center" Margin="14,0,0,0" />
                                         <TextBlock Grid.Column="1" Classes="th" Text="{Binding PriceText}" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="2" Classes="th" Text="{Binding StockQtyText}" VerticalAlignment="Center" />
@@ -800,8 +896,7 @@
                                         <TextBlock Grid.Column="4" Classes="th" Text="{Binding ActionsText}" VerticalAlignment="Center" />
                                     </Grid>
                                     <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" />
-                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" MaxHeight="520">
-                                        <ItemsControl ItemsSource="{Binding StockItems}">
+                                    <ItemsControl ItemsSource="{Binding StockItems}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:Product">
                                                     <Border BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,0,1"
@@ -846,7 +941,6 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
 
@@ -854,13 +948,13 @@
 
                         <!-- ============ SETTINGS SECTION ============ -->
                         <StackPanel IsVisible="{Binding IsSettingsSection}" Margin="0,22,0,0" Spacing="18">
-                            <TextBlock Text="Workspace settings" FontFamily="Georgia, serif" FontSize="20"
+                            <TextBlock Text="Workspace settings" FontFamily="{StaticResource HeadingFont}" FontSize="20"
                                        FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
                                 <!-- Units -->
                                 <Border Grid.Column="0" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="18">
+                                        CornerRadius="7" Padding="18">
                                     <StackPanel Spacing="12">
                                         <StackPanel Spacing="3">
                                             <TextBlock Text="Units" FontSize="16" FontWeight="Bold"
@@ -896,7 +990,7 @@
 
                                 <!-- Users -->
                                 <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="18">
+                                        CornerRadius="7" Padding="18">
                                     <StackPanel Spacing="12">
                                         <StackPanel Spacing="3">
                                             <TextBlock Text="Users" FontSize="16" FontWeight="Bold"
@@ -935,7 +1029,7 @@
 
                             <!-- System -->
                             <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                    CornerRadius="12" Padding="18">
+                                    CornerRadius="7" Padding="18">
                                 <StackPanel Spacing="14">
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="System" FontSize="16" FontWeight="Bold"
@@ -966,7 +1060,7 @@
                                      long list can grow and scroll underneath it.
                                      Printed on the receipt only - never stored in the database. -->
                                 <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="14,12">
+                                        CornerRadius="7" Padding="14,12">
                                     <StackPanel Spacing="8">
                                         <Grid ColumnDefinitions="Auto,*">
                                             <TextBlock Grid.Column="0" Text="{Binding CustomerDetailsText}" FontSize="14"
@@ -978,6 +1072,8 @@
                                                        TextTrimming="CharacterEllipsis"
                                                        Foreground="{StaticResource TextFaint}" />
                                         </Grid>
+                                        <CheckBox IsChecked="{Binding IsWalkInInvoice}" FontSize="12"
+                                                  Content="Simple walk-in invoice (no customer details)" />
                                         <!-- Name / phone / address on one row keeps this panel short -->
                                         <Grid ColumnDefinitions="*,150,*" ColumnSpacing="10">
                                             <StackPanel Grid.Column="0" Spacing="2">
@@ -1010,7 +1106,7 @@
 
                                 <!-- Item list last: it takes the remaining height and scrolls -->
                                 <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Grid.Column="0" Text="Review Items" FontFamily="Georgia, serif"
+                                    <TextBlock Grid.Column="0" Text="Review Items" FontFamily="{StaticResource HeadingFont}"
                                                FontSize="18" FontWeight="Bold" VerticalAlignment="Center"
                                                Foreground="{StaticResource TextPrimary}" />
                                     <Button Grid.Column="1" Classes="ghost" Command="{Binding BackToShoppingCommand}">
@@ -1021,10 +1117,10 @@
                                     </Button>
                                 </Grid>
 
-                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12">
+                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="7">
                                     <DockPanel>
                                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,132,120,96"
-                                              Background="#FAFAFA" Height="40">
+                                              Background="#EDECEB" Height="40">
                                             <TextBlock Classes="th" Text="ITEM" VerticalAlignment="Center" Margin="14,0,0,0" />
                                             <TextBlock Grid.Column="1" Classes="th" Text="QTY" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="2" Classes="th" Text="UNIT PRICE" VerticalAlignment="Center" />
@@ -1092,9 +1188,9 @@
 
                             <!-- Right: payment summary -->
                             <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                    CornerRadius="12" Padding="18" VerticalAlignment="Top">
+                                    CornerRadius="7" Padding="18" VerticalAlignment="Top">
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="Payment Summary" FontFamily="Georgia, serif" FontSize="18"
+                                    <TextBlock Text="Payment Summary" FontFamily="{StaticResource HeadingFont}" FontSize="18"
                                                FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
 
                                     <Grid ColumnDefinitions="*,Auto">
@@ -1141,8 +1237,26 @@
 
                                     <StackPanel Spacing="3">
                                         <TextBlock Classes="fieldLabel" Text="PAYMENT METHOD" />
-                                        <ComboBox Classes="field" ItemsSource="{Binding PaymentMethods}"
-                                                  SelectedItem="{Binding PaymentMethod}" />
+                                        <!-- Segmented control (matches the design's .seg / .seg-opt) -->
+                                        <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                                CornerRadius="4">
+                                            <UniformGrid Columns="3">
+                                                <Button Classes="segbtn" Classes.on="{Binding IsPaymentCash}"
+                                                        Padding="6,9" Content="Cash"
+                                                        Command="{Binding SelectPaymentMethodCommand}"
+                                                        CommandParameter="Cash" />
+                                                <Button Classes="segbtn" Classes.on="{Binding IsPaymentCard}"
+                                                        Padding="6,9" Content="Card"
+                                                        BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                                                        Command="{Binding SelectPaymentMethodCommand}"
+                                                        CommandParameter="Card" />
+                                                <Button Classes="segbtn" Classes.on="{Binding IsPaymentBank}"
+                                                        Padding="6,9" Content="Bank Transfer"
+                                                        BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                                                        Command="{Binding SelectPaymentMethodCommand}"
+                                                        CommandParameter="Bank Transfer" />
+                                            </UniformGrid>
+                                        </Border>
                                     </StackPanel>
                                     <StackPanel Spacing="3">
                                         <TextBlock Classes="fieldLabel" Text="AMOUNT PAID" />
@@ -1160,10 +1274,10 @@
                                         </Grid>
                                     </Border>
 
-                                    <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
+                                    <Button Classes="primary" CornerRadius="4" HorizontalAlignment="Stretch"
                                             Padding="12,14" Command="{Binding CompleteSaleCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                            <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                            <Path Classes="icon" Width="17" Height="17" Stroke="{StaticResource Accent}"
                                                   Data="M5 12 L10 17 L19 7" />
                                             <TextBlock Text="{Binding CompleteSalePrintText}" FontWeight="Bold"
                                                        VerticalAlignment="Center" />
@@ -1179,9 +1293,9 @@
 
                         <!-- ============ ORDER COMPLETED SECTION ============ -->
                         <Grid IsVisible="{Binding IsCompleteSection}" Margin="0,22,0,0">
-                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12"
+                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="7"
                                     MaxWidth="660" HorizontalAlignment="Center" VerticalAlignment="Top"
-                                    Background="White">
+                                    Background="{StaticResource Surface}">
                                 <StackPanel>
                                     <!-- Success banner -->
                                     <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,0,0,1"
@@ -1193,7 +1307,7 @@
                                                       StrokeLineCap="Round" StrokeJoin="Round"
                                                       Data="M5 12 L10 17 L19 7" />
                                             </Border>
-                                            <TextBlock Text="Order Completed" FontFamily="Georgia, serif"
+                                            <TextBlock Text="Order Completed" FontFamily="{StaticResource HeadingFont}"
                                                        FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"
                                                        Foreground="#14532D" />
                                             <TextBlock FontSize="13" HorizontalAlignment="Center"
@@ -1380,10 +1494,10 @@
                                          VerticalAlignment="Center"
                                          PlaceholderText="{Binding SearchOrdersPlaceholder}" />
                             </Grid>
-                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12">
+                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="7">
                                 <DockPanel>
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="140,120,*,90,110,140"
-                                          Background="#FAFAFA" Height="40">
+                                          Background="#EDECEB" Height="40">
                                         <TextBlock Classes="th" Text="{Binding ReceiptNoText}" VerticalAlignment="Center" Margin="14,0,0,0" />
                                         <TextBlock Grid.Column="1" Classes="th" Text="{Binding DateText}" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="2" Classes="th" Text="{Binding CustomerText}" VerticalAlignment="Center" />
@@ -1466,7 +1580,7 @@
                                 <Button Grid.Column="2" Classes="primary" Padding="16,11"
                                         Command="{Binding $parent[Window].((vm:MaterialSelectionViewModel)DataContext).PrintSelectedOrderCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                        <Path Classes="icon" Width="17" Height="17" Stroke="{StaticResource Accent}"
                                               Data="M7 8 V4 H17 V8 M7 17 H5 V10 H19 V17 H17 M7 14 H17 V20 H7 Z" />
                                         <TextBlock Text="Print Receipt" FontWeight="Bold" VerticalAlignment="Center" />
                                     </StackPanel>
@@ -1486,10 +1600,10 @@
                                                    Foreground="{StaticResource TextMuted}" />
                                     </StackPanel>
 
-                                    <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="12">
+                                    <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="7">
                                         <DockPanel>
                                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,70,110,110"
-                                                  Background="#FAFAFA" Height="40">
+                                                  Background="#EDECEB" Height="40">
                                                 <TextBlock Classes="th" Text="ITEM" VerticalAlignment="Center" Margin="14,0,0,0" />
                                                 <TextBlock Grid.Column="1" Classes="th" Text="QTY" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Classes="th" Text="UNIT PRICE" VerticalAlignment="Center" />
@@ -1538,9 +1652,9 @@
 
                                 <!-- Right: money breakdown -->
                                 <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="18" VerticalAlignment="Top">
+                                        CornerRadius="7" Padding="18" VerticalAlignment="Top">
                                     <StackPanel Spacing="10">
-                                        <TextBlock Text="Payment Summary" FontFamily="Georgia, serif" FontSize="17"
+                                        <TextBlock Text="Payment Summary" FontFamily="{StaticResource HeadingFont}" FontSize="17"
                                                    FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Grid.Column="0" Text="Subtotal" FontSize="13"
@@ -1606,7 +1720,7 @@
                             <!-- Period toggle -->
                             <Grid ColumnDefinitions="Auto,*">
                                 <Border Grid.Column="0" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        Background="White">
+                                        Background="Transparent">
                                     <StackPanel Orientation="Horizontal">
                                         <Button Classes="segbtn" Classes.on="{Binding IsDailyReport}"
                                                 Command="{Binding SetReportPeriodCommand}" CommandParameter="Daily"
@@ -1664,10 +1778,10 @@
                             <Grid ColumnDefinitions="*,300" ColumnSpacing="16">
                                 <!-- Per-product table -->
                                 <Border Grid.Column="0" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12">
+                                        CornerRadius="7">
                                     <DockPanel>
                                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,110,80,110"
-                                              Background="#FAFAFA" Height="40">
+                                              Background="#EDECEB" Height="40">
                                             <TextBlock Classes="th" Text="{Binding ProductTypeText}" VerticalAlignment="Center" Margin="14,0,0,0" />
                                             <TextBlock Grid.Column="1" Classes="th" Text="{Binding DimensionText}" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="2" Classes="th" Text="{Binding SoldText}" VerticalAlignment="Center" />
@@ -1714,9 +1828,9 @@
 
                                 <!-- By category -->
                                 <Border Grid.Column="1" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                                        CornerRadius="12" Padding="16" VerticalAlignment="Top">
+                                        CornerRadius="7" Padding="16" VerticalAlignment="Top">
                                     <StackPanel Spacing="10">
-                                        <TextBlock Text="{Binding ByCategoryText}" FontFamily="Georgia, serif" FontSize="16"
+                                        <TextBlock Text="{Binding ByCategoryText}" FontFamily="{StaticResource HeadingFont}" FontSize="16"
                                                    FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                                         <ItemsControl ItemsSource="{Binding ReportCategories}">
                                             <ItemsControl.ItemTemplate>
@@ -1741,70 +1855,310 @@
                                 </Border>
                             </Grid>
                         </StackPanel>
+
+                        <!-- Bottom spacer so the last row/card clears the viewport edge when scrolled -->
+                        <Border Height="76" Background="Transparent" />
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- Technical specs use an auto-width column and collapse outside wide Inventory. -->
-                <Border Grid.Column="1" Width="300"
-                        IsVisible="{Binding IsTechnicalPanelVisible}"
+                <!-- Click-outside catcher: collapses the expanded cart back to the rail. -->
+                <Border Grid.Column="0" Background="Transparent" IsVisible="{Binding IsCartExpanded}"
+                        PointerPressed="CartScrim_PointerPressed" />
+
+                <!-- Cart: permanent on wide screens; a thin, tappable rail on smaller screens. -->
+                <Border Grid.Column="1" Width="{Binding CartPanelWidth}"
+                        IsVisible="{Binding IsTechnicalPanelVisible}" ClipToBounds="True"
+                        Background="{StaticResource Surface}"
                         BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0">
-                    <DockPanel Margin="20,24">
-                        <!-- Add to cart pinned bottom -->
-                        <Button DockPanel.Dock="Bottom" Classes="primary" Command="{Binding AddToCartCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                <Path Classes="icon" Width="18" Height="18" Stroke="White"
-                                      Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
-                                <TextBlock Classes="mono" Text="ADD TO CART" FontWeight="Bold" VerticalAlignment="Center" />
-                            </StackPanel>
+                    <Border.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="Width" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                    <Panel>
+                        <!-- Collapsed rail (smaller screens only): click to expand; raw item names + amounts -->
+                        <Button IsVisible="{Binding ShowCartRail}" Classes="bare" Padding="0"
+                                Command="{Binding ToggleCartExpandedCommand}"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <DockPanel LastChildFill="True">
+                                <!-- Header -->
+                                <StackPanel DockPanel.Dock="Top" Spacing="7" Margin="12,18,12,12">
+                                    <TextBlock Classes="mono" Text="CART" FontSize="10" FontWeight="Bold"
+                                               Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" />
+                                    <Border IsVisible="{Binding HasCartBadge}" Background="{StaticResource PeachTile}"
+                                            CornerRadius="10" Padding="9,2" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding CartItemCount}" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentDark}" />
+                                    </Border>
+                                </StackPanel>
+                                <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" />
+
+                                <!-- Total pinned at the bottom -->
+                                <StackPanel DockPanel.Dock="Bottom" IsVisible="{Binding !IsCartEmpty}" Spacing="6"
+                                            Margin="12,10,12,16">
+                                    <Border Height="1" Background="{StaticResource HairLine}" />
+                                    <TextBlock Text="{Binding CartTotalLabel}" FontSize="14" FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center" />
+                                </StackPanel>
+
+                                <!-- Empty state -->
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding IsCartEmpty}" Text="Empty"
+                                           FontSize="11" Foreground="{StaticResource TextMuted}"
+                                           HorizontalAlignment="Center" Margin="0,16,0,0" />
+
+                                <!-- Item list -->
+                                <ScrollViewer IsVisible="{Binding !IsCartEmpty}" HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto" Padding="12,10,10,4">
+                                    <ItemsControl ItemsSource="{Binding Cart}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:CartLine">
+                                                <Border BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,0,1"
+                                                        Padding="0,0,0,9" Margin="0,0,0,9">
+                                                    <StackPanel Spacing="3">
+                                                        <TextBlock Text="{Binding Material}" FontSize="12" FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                                                   LineHeight="15" Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock Text="{Binding LineTotalLabel}" FontSize="12" FontWeight="Bold"
+                                                                   Foreground="{StaticResource Accent}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
                         </Button>
 
-                        <StackPanel DockPanel.Dock="Top">
-                            <TextBlock Classes="mono" Text="{Binding MaterialSpecsText}" FontSize="12" FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimary}" />
-                            <TextBlock Text="{Binding DetailSubtitle}" FontSize="13" TextWrapping="Wrap"
-                                       Foreground="{StaticResource TextMuted}" Margin="0,6,0,16" />
-
-                            <!-- Placeholder box -->
-                            <Border Background="#F7F7F8" CornerRadius="10" Padding="18" Height="180">
-                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-                                    <Border Width="40" Height="40" CornerRadius="20" Background="White"
-                                            BorderBrush="{StaticResource HairLine}" BorderThickness="1">
-                                        <Path Classes="icon" Width="20" Height="20"
-                                              Data="M12 5 a7 7 0 1 0 0.01 0 M12 11 V16 M12 8 h0.01" />
-                                    </Border>
-                                    <TextBlock Text="Live Technical Specifications and Dimension Calculator will appear here."
-                                               FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="200"
-                                               Foreground="{StaticResource TextMuted}" />
-                                </StackPanel>
-                            </Border>
-
-                            <TextBlock Classes="mono" Text="{Binding QuickActionsText}" FontSize="12" FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimary}" Margin="0,24,0,10" />
-
-                            <Button Classes="quickAction" Command="{Binding OpenHistoryCommand}" Margin="0,0,0,10">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Path Grid.Column="0" Classes="icon" Width="18" Height="18"
-                                          Data="M12 6 a6 6 0 1 0 0.01 0 M12 8 V12 L15 14 M4 8 L6.5 6.5" />
-                                    <TextBlock Grid.Column="1" Text="History" Margin="12,0,0,0" VerticalAlignment="Center"
-                                               FontSize="14" Foreground="{StaticResource TextPrimary}" />
-                                    <Path Grid.Column="2" Classes="icon" Width="16" Height="16" Data="M9 6 L15 12 L9 18" />
-                                </Grid>
-                            </Button>
-
-                            <Button Classes="quickAction" Command="{Binding OpenShipmentsCommand}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Path Grid.Column="0" Classes="icon" Width="18" Height="18"
-                                          Data="M3 6 H15 V16 H3 Z M15 9 H19 L21 12 V16 H15 M6.5 18 a1.5 1.5 0 1 0 0.01 0 M17 18 a1.5 1.5 0 1 0 0.01 0" />
-                                    <TextBlock Grid.Column="1" Text="Shipments" Margin="12,0,0,0" VerticalAlignment="Center"
-                                               FontSize="14" Foreground="{StaticResource TextPrimary}" />
-                                    <Path Grid.Column="2" Classes="icon" Width="16" Height="16" Data="M9 6 L15 12 L9 18" />
-                                </Grid>
-                            </Button>
+                    <!-- Full cart contents (always on wide screens, or when the rail is expanded) -->
+                    <DockPanel Margin="20,24" IsVisible="{Binding ShowCartContents}">
+                        <!-- Header -->
+                        <StackPanel DockPanel.Dock="Top" Spacing="3">
+                            <TextBlock Classes="mono" Text="CURRENT SALE" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMuted}" />
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Grid.Column="0" Classes="cardTitle" Text="Cart" VerticalAlignment="Center" />
+                                <Border Grid.Column="1" IsVisible="{Binding HasCartBadge}" VerticalAlignment="Center"
+                                        Background="{StaticResource PeachTile}" CornerRadius="10" Padding="9,3">
+                                    <TextBlock Text="{Binding CartItemCount}" FontSize="12" FontWeight="Bold"
+                                               Foreground="{StaticResource AccentDark}" />
+                                </Border>
+                                <!-- Collapse back to the rail (smaller screens only) -->
+                                <Button Grid.Column="2" Classes="bare" IsVisible="{Binding !IsWideLayout}"
+                                        Command="{Binding ToggleCartExpandedCommand}" Width="30" Height="30"
+                                        Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <Path Classes="icon" Width="16" Height="16" Data="M9 6 L15 12 L9 18" />
+                                </Button>
+                            </Grid>
                         </StackPanel>
+                        <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" Margin="0,14,0,0" />
+
+                        <!-- Total + checkout pinned bottom (only when the cart has items) -->
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="10" Margin="0,14,0,0"
+                                    IsVisible="{Binding !IsCartEmpty}">
+                            <Border Height="1" Background="{StaticResource HairLine}" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="Total" FontSize="14" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Grid.Column="1" Text="{Binding CartTotalLabel}" FontSize="20"
+                                           FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                            </Grid>
+                            <Button Classes="primary" HorizontalAlignment="Stretch"
+                                    Command="{Binding GoToCheckoutCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding CheckoutText}" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                    Command="{Binding NewSaleCommand}" Content="Clear cart" />
+                        </StackPanel>
+
+                        <!-- Live item list (or empty state) -->
+                        <Grid Margin="0,14,0,0">
+                            <StackPanel IsVisible="{Binding IsCartEmpty}" VerticalAlignment="Center"
+                                        HorizontalAlignment="Center" Spacing="12">
+                                <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource ChipBg}">
+                                    <Path Classes="icon" Width="24" Height="24"
+                                          Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                                </Border>
+                                <TextBlock Text="No items yet" FontSize="14" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="Pick a category and add items to build the current sale."
+                                           FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="220"
+                                           Foreground="{StaticResource TextMuted}" />
+                            </StackPanel>
+
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                          IsVisible="{Binding !IsCartEmpty}">
+                                <ItemsControl ItemsSource="{Binding Cart}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:CartLine">
+                                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,0,1"
+                                                    Padding="12,10,0,10">
+                                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                                    <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,10,0">
+                                                        <TextBlock Text="{Binding Material}" FontSize="13"
+                                                                   FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                   Foreground="{StaticResource TextPrimary}" />
+                                                        <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">
+                                                            <Run Text="{Binding DimensionDisplay}" />
+                                                            <Run Text=" · " />
+                                                            <Run Text="{Binding Quantity}" />
+                                                            <Run Text=" ×" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding LineTotalLabel}"
+                                                               FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
+                                                               Margin="0,0,6,0"
+                                                               Foreground="{StaticResource TextPrimary}" />
+                                                    <Button Grid.Column="2" Classes="bare" Width="24" Height="24"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).RemoveLineCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Path Classes="icon" Width="13" Height="13"
+                                                              Stroke="{StaticResource Danger}"
+                                                              Data="M6 6 L18 18 M18 6 L6 18" />
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
                     </DockPanel>
+                    </Panel>
                 </Border>
             </Grid>
         </DockPanel>
+
+        <!-- ===== Product detail drawer (adjust price + quantity, then add) ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsProductDetailOpen}"
+               ClipToBounds="True">
+            <Button Classes="scrim" Classes.open="{Binding IsProductDetailOpen}"
+                    Command="{Binding CloseProductDetailCommand}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <Border Classes="drawer" Classes.open="{Binding IsProductDetailOpen}"
+                    Width="420" HorizontalAlignment="Right" Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
+                    BoxShadow="-8 0 30 0 #1A000000">
+                <DockPanel>
+                    <!-- Header: category tag + name + dimension + close -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,20,0">
+                        <StackPanel Grid.Column="0" Spacing="8">
+                            <Border Background="{StaticResource ChipBg}" CornerRadius="6" Padding="8,4"
+                                    HorizontalAlignment="Left">
+                                <TextBlock Classes="mono" Text="{Binding DetailCategoryTag}" FontSize="11"
+                                           Foreground="{StaticResource TextMuted}" />
+                            </Border>
+                            <TextBlock Text="{Binding DetailProductName}"
+                                       FontFamily="{StaticResource HeadingFont}" FontSize="24"
+                                       FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Text="{Binding DetailDimensionText}" FontSize="13"
+                                       Foreground="{StaticResource TextMuted}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
+                                Command="{Binding CloseProductDetailCommand}" Width="30" Height="30">
+                            <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
+                        </Button>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}" Margin="0,16,0,0" />
+
+                    <!-- Footer: line total + add to cart -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}"
+                            BorderThickness="0,1,0,0" Padding="24,16">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding DetailLineTotalTitle}" FontSize="16"
+                                           FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Grid.Column="1" Text="{Binding DetailLineTotalLabel}" FontSize="18"
+                                           FontFamily="{StaticResource HeadingFont}" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}" />
+                            </Grid>
+                            <Button Classes="primary" HorizontalAlignment="Stretch"
+                                    Command="{Binding AddDetailToCartCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <Path Classes="icon" Width="16" Height="16" Stroke="{StaticResource Accent}"
+                                          Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
+                                    <TextBlock Text="{Binding AddToCartText}" FontWeight="Bold"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Body -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="24,18,24,0">
+                        <StackPanel Spacing="18">
+                            <!-- Product image (placeholder until images are stored) -->
+                            <Border Height="200" CornerRadius="7" Background="#EDECEB"
+                                    BorderBrush="{StaticResource HairLine}" BorderThickness="1">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                                    <Border Width="56" Height="56" CornerRadius="12"
+                                            Background="{StaticResource PeachTile}">
+                                        <Path Classes="icon" Width="28" Height="28" Stroke="{StaticResource Accent}"
+                                              Data="M4 5 H20 V19 H4 Z M4 15 L9 10 L13 14 L16 11 L20 15" />
+                                    </Border>
+                                    <TextBlock Text="No product image" FontSize="12"
+                                               Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Stock availability -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Classes="icon" Width="15" Height="15"
+                                      Data="M12 3 L20 7 V17 L12 21 L4 17 V7 Z M4 7 L12 11 L20 7 M12 11 V21" />
+                                <TextBlock Text="{Binding DetailStockText}" FontSize="13"
+                                           VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                            </StackPanel>
+
+                            <!-- Adjust unit price + quantity: two identical boxes -->
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+                                <StackPanel Grid.Column="0" Spacing="6">
+                                    <TextBlock Text="{Binding DetailUnitPriceLabel}" FontSize="12"
+                                               FontWeight="SemiBold" Foreground="{StaticResource TextMuted}" />
+                                    <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                            CornerRadius="4" Height="44" Background="Transparent">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <TextBlock Grid.Column="0" Text="$" FontSize="14" VerticalAlignment="Center"
+                                                       Margin="12,0,2,0" Foreground="{StaticResource TextMuted}" />
+                                            <TextBox Grid.Column="1" Classes="searchInput" Text="{Binding DetailUnitPriceText}"
+                                                     FontSize="15" VerticalAlignment="Center"
+                                                     VerticalContentAlignment="Center" Padding="0,0,12,0"
+                                                     Background="Transparent" BorderThickness="0" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{Binding DetailQuantityLabel}" FontSize="12"
+                                               FontWeight="SemiBold" Foreground="{StaticResource TextMuted}" />
+                                    <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                                            CornerRadius="4" Height="44">
+                                        <Grid ColumnDefinitions="44,*,44">
+                                            <Button Grid.Column="0" Classes="qtyStep" Content="−"
+                                                    Width="44" Height="44"
+                                                    Command="{Binding DecrementDetailQuantityCommand}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DetailQuantity}" Classes="mono"
+                                                       FontSize="15" FontWeight="Bold" TextAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextPrimary}" />
+                                            <Button Grid.Column="2" Classes="qtyStep" Content="+"
+                                                    Width="44" Height="44"
+                                                    Command="{Binding IncrementDetailQuantityCommand}" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Panel>
 
         <!-- ===== Modal drawer: Select Dimensions ===== -->
         <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsDetailOpen}"
@@ -1816,7 +2170,7 @@
 
             <!-- Drawer -->
             <Border Classes="drawer" Classes.open="{Binding IsDetailOpen}"
-                    Width="480" HorizontalAlignment="Right" Background="White"
+                    Width="480" HorizontalAlignment="Right" Background="{StaticResource Surface}"
                     BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
                     BoxShadow="-8 0 30 0 #1A000000">
                 <DockPanel Margin="0">
@@ -1825,7 +2179,7 @@
                         <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Classes="mono" Text="MATERIAL SPECS" FontSize="12" FontWeight="Bold"
                                        Foreground="{StaticResource TextMuted}" />
-                            <TextBlock Text="{Binding SelectDimensionsText}" FontFamily="Georgia, serif" FontSize="22"
+                            <TextBlock Text="{Binding SelectDimensionsText}" FontFamily="{StaticResource HeadingFont}" FontSize="22"
                                        FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                             <TextBlock Text="{Binding DetailMaterialName}" FontSize="13"
                                        Foreground="{StaticResource TextMuted}" />
@@ -1852,10 +2206,10 @@
                     <!-- Bottom action bar -->
                     <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}" BorderThickness="0,1,0,0"
                             Padding="24,16">
-                        <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
+                        <Button Classes="primary" CornerRadius="4" HorizontalAlignment="Stretch"
                                 Command="{Binding AddSelectedToCartCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                <Path Classes="icon" Width="17" Height="17" Stroke="White"
+                                <Path Classes="icon" Width="17" Height="17" Stroke="{StaticResource Accent}"
                                       Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
                                 <TextBlock Text="{Binding AddToCartText}" FontWeight="Bold" VerticalAlignment="Center" />
                             </StackPanel>
@@ -1871,11 +2225,11 @@
                                          SelectedItem="{Binding SelectedProduct}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="models:Product">
-                                            <Border CornerRadius="0" BorderThickness="1" Padding="12"
+                                            <Border CornerRadius="4" BorderThickness="1" Padding="12"
                                                     Background="{Binding $parent[ListBoxItem].IsSelected, Converter={StaticResource RowBg}, ConverterParameter=True}"
                                                     BorderBrush="{Binding $parent[ListBoxItem].IsSelected, Converter={StaticResource RowBorder}, ConverterParameter=True}">
                                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" >
-                                                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="0"
+                                                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="4"
                                                             Background="{StaticResource ChipBg}" VerticalAlignment="Center">
                                                         <Path Classes="icon" Width="22" Height="22"
                                                               Data="M4 9 H20 M4 9 L6 6 H18 L20 9 M4 9 V16 H20 V9 M9 9 V16 M14 9 V16" />
@@ -1902,7 +2256,7 @@
 
                                                         <!-- In cart: swap the label for a light inline stepper. -->
                                                         <Border IsVisible="{Binding IsInCart}" HorizontalAlignment="Right"
-                                                                Background="White" BorderThickness="1"
+                                                                Background="Transparent" BorderThickness="1"
                                                                 BorderBrush="{StaticResource Accent}">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <Button Classes="qtyStep" Content="−"
@@ -1964,7 +2318,7 @@
 
             <!-- Drawer -->
             <Border Classes="drawer" Classes.open="{Binding IsStockFormOpen}"
-                    Width="440" HorizontalAlignment="Right" Background="White"
+                    Width="440" HorizontalAlignment="Right" Background="{StaticResource Surface}"
                     BorderBrush="{StaticResource HairLine}" BorderThickness="1,0,0,0"
                     BoxShadow="-8 0 30 0 #1A000000">
                 <DockPanel>
@@ -1973,7 +2327,7 @@
                         <StackPanel Grid.Column="0" Spacing="4">
                                 <TextBlock Classes="mono" Text="{Binding NavInventoryText}" FontSize="12" FontWeight="Bold"
                                        Foreground="{StaticResource TextMuted}" />
-                            <TextBlock Text="{Binding FormTitle}" FontFamily="Georgia, serif" FontSize="22"
+                            <TextBlock Text="{Binding FormTitle}" FontFamily="{StaticResource HeadingFont}" FontSize="22"
                                        FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                         </StackPanel>
                         <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
@@ -1990,12 +2344,12 @@
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding StockStatus}" FontSize="12" TextWrapping="Wrap"
                                        Foreground="{StaticResource TextMuted}" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                <Button Grid.Column="0" Classes="primary" Padding="12,12"
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <Button Grid.Column="0" Classes="ghost" Command="{Binding NewProductCommand}"
+                                        Content="{Binding ClearText}" />
+                                <Button Grid.Column="1" Classes="primary" Padding="12,12"
                                         Command="{Binding SaveProductCommand}"
                                         Content="{Binding SaveButtonLabel}" />
-                                <Button Grid.Column="1" Classes="ghost" Command="{Binding NewProductCommand}"
-                                        Content="{Binding ClearText}" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -2004,39 +2358,20 @@
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="24,18,24,0">
                         <StackPanel Spacing="14">
                             <StackPanel Spacing="3">
-                                <TextBlock Classes="fieldLabel" Text="{Binding GroupCategoryText}" />
-                                <ComboBox Classes="field" ItemsSource="{Binding CategoryChoices}"
-                                          SelectedItem="{Binding SelectedCategoryChoice}"
-                                          IsVisible="{Binding !IsEditing}" />
-                                <TextBox Classes="field" Text="{Binding FormCategory}"
-                                         PlaceholderText="{Binding CategoryPlaceholderText}"
-                                         IsVisible="{Binding ShowCategoryTextInput}" />
+                                <TextBlock Classes="fieldLabel" Text="{Binding MaterialNameText}" />
+                                <TextBox Classes="field" Text="{Binding FormName}"
+                                         PlaceholderText="{Binding MaterialPlaceholderText}" />
                             </StackPanel>
                             <StackPanel Spacing="3">
-                                <TextBlock Classes="fieldLabel" Text="{Binding MaterialNameText}" />
-                                <ComboBox Classes="field" ItemsSource="{Binding MaterialChoices}"
-                                          SelectedItem="{Binding SelectedMaterialChoice}"
-                                          IsVisible="{Binding !IsEditing}" />
-                                <TextBox Classes="field" Text="{Binding FormName}"
-                                         PlaceholderText="{Binding MaterialPlaceholderText}"
-                                         IsVisible="{Binding ShowMaterialTextInput}" />
+                                <TextBlock Classes="fieldLabel" Text="{Binding GroupCategoryText}" />
+                                <ComboBox Classes="field" ItemsSource="{Binding CategoryChoices}"
+                                          SelectedItem="{Binding SelectedCategoryChoice}" />
                             </StackPanel>
                             <StackPanel Spacing="3">
                                 <TextBlock Classes="fieldLabel" Text="{Binding DimensionSpecText}" />
                                 <TextBox Classes="field" Text="{Binding FormDimension}"
                                          PlaceholderText="{Binding DimensionPlaceholderText}" />
                             </StackPanel>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <StackPanel Grid.Column="0" Spacing="3">
-                                    <TextBlock Classes="fieldLabel" Text="{Binding UnitText}" />
-                                    <ComboBox Classes="field" ItemsSource="{Binding Units}"
-                                              SelectedItem="{Binding FormUnit}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="3">
-                                    <TextBlock Classes="fieldLabel" Text="{Binding SkuLabelText}" />
-                                    <TextBox Classes="field" Text="{Binding FormSku}" PlaceholderText="{Binding OptionalText}" />
-                                </StackPanel>
-                            </Grid>
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                 <StackPanel Grid.Column="0" Spacing="3">
                                     <TextBlock Classes="fieldLabel" Text="{Binding ItemPriceText}" />
@@ -2053,153 +2388,42 @@
             </Border>
         </Panel>
 
-        <!-- ===== Left drawer: Cart + Checkout (3/10 of the window width) ===== -->
-        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsHitTestVisible="{Binding IsCartDrawerOpen}"
+        <!-- ===== Centered New Category modal ===== -->
+        <Panel Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsNewCategoryModalOpen}"
+               IsHitTestVisible="{Binding IsNewCategoryModalOpen}"
                ClipToBounds="True">
-            <!-- Scrim (click to close) -->
-            <Button Classes="scrim" Classes.open="{Binding IsCartDrawerOpen}"
-                    Command="{Binding CloseCartDrawerCommand}"
+            <Button Classes="scrim" Classes.open="{Binding IsNewCategoryModalOpen}"
+                    Command="{Binding CancelNewCategoryCommand}"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
-            <Border Classes="drawerLeft" Classes.open="{Binding IsCartDrawerOpen}"
-                    Width="{Binding CartDrawerWidth}" HorizontalAlignment="Left" Background="White"
-                    BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0"
-                    BoxShadow="8 0 30 0 #1A000000">
-                <DockPanel>
-                    <!-- Header -->
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="22,22,18,0">
+            <Border Width="420" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{StaticResource Surface}" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                    CornerRadius="7" BoxShadow="0 16 44 0 #33000000" Padding="28,24">
+                <StackPanel Spacing="18">
+                    <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Classes="mono" Text="CURRENT SALE" FontSize="12" FontWeight="Bold"
+                            <TextBlock Classes="mono" Text="{Binding NavInventoryText}" FontSize="12" FontWeight="Bold"
                                        Foreground="{StaticResource TextMuted}" />
-                            <TextBlock Text="Cart" FontFamily="Georgia, serif" FontSize="22"
-                                       FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Text="{Binding NewCategoryTitleText}" FontFamily="{StaticResource HeadingFont}"
+                                       FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                         </StackPanel>
                         <Button Grid.Column="1" Classes="bare" VerticalAlignment="Top"
-                                Command="{Binding CloseCartDrawerCommand}" Width="30" Height="30">
+                                Command="{Binding CancelNewCategoryCommand}" Width="30" Height="30">
                             <Path Classes="icon" Width="16" Height="16" Data="M6 6 L18 18 M18 6 L6 18" />
                         </Button>
                     </Grid>
-
-                    <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource HairLine}"
-                            Margin="0,16,0,0" />
-
-                    <!-- Payment + checkout pinned to the bottom -->
-                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource HairLine}"
-                            BorderThickness="0,1,0,0" Padding="22,16"
-                            IsVisible="{Binding !IsCartEmpty}">
-                        <StackPanel Spacing="10">
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                <StackPanel Grid.Column="0" Spacing="3">
-                                    <TextBlock Classes="fieldLabel" Text="PAYMENT METHOD" />
-                                    <ComboBox Classes="field" ItemsSource="{Binding PaymentMethods}"
-                                              SelectedItem="{Binding PaymentMethod}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="3">
-                                    <TextBlock Classes="fieldLabel" Text="AMOUNT PAID" />
-                                    <TextBox Classes="field" Text="{Binding AmountPaidText}"
-                                             PlaceholderText="exact" />
-                                </StackPanel>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Grid.Column="0" Text="Total" FontSize="14"
-                                           Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding CartTotalLabel}" FontSize="20"
-                                           FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
-                            </Grid>
-                            <TextBlock Text="{Binding ChangeLabel}" FontSize="13" FontWeight="SemiBold"
-                                       HorizontalAlignment="Right" Foreground="{StaticResource Accent}" />
-                            <Button Classes="primary" CornerRadius="0" HorizontalAlignment="Stretch"
-                                    Padding="12,13" Command="{Binding GoToCheckoutCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding CheckoutText}" FontWeight="Bold" />
-                                    <TextBlock Text="{Binding CartTotalLabel}" FontWeight="Bold" />
-                                </StackPanel>
-                            </Button>
-                            <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                    Command="{Binding NewSaleCommand}" Content="Clear Cart" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Cart lines -->
-                    <Grid Margin="22,16,22,0">
-                        <!-- Empty state -->
-                        <StackPanel IsVisible="{Binding IsCartEmpty}" VerticalAlignment="Center"
-                                    HorizontalAlignment="Center" Spacing="12">
-                            <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource ChipBg}">
-                                <Path Classes="icon" Width="24" Height="24"
-                                      Data="M3 4 H5 L7.2 15 H18 L20 7 H6 M8.5 19 a1.2 1.2 0 1 0 0.01 0 M17 19 a1.2 1.2 0 1 0 0.01 0" />
-                            </Border>
-                            <TextBlock Text="Your cart is empty" FontSize="14" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" Foreground="{StaticResource TextPrimary}" />
-                            <TextBlock Text="Pick a category, then add items to start a sale."
-                                       FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="220"
-                                       Foreground="{StaticResource TextMuted}" />
-                        </StackPanel>
-
-                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                      IsVisible="{Binding !IsCartEmpty}">
-                            <ItemsControl ItemsSource="{Binding Cart}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:CartLine">
-                                        <Border CornerRadius="0" BorderBrush="{StaticResource HairLine}"
-                                                BorderThickness="1" Padding="12" Margin="0,0,0,10">
-                                            <StackPanel Spacing="10">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Material}" FontSize="14"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{StaticResource TextPrimary}"
-                                                                   TextWrapping="Wrap" />
-                                                        <TextBlock Text="{Binding DimensionDisplay}" FontSize="12"
-                                                                   Foreground="{StaticResource TextMuted}" />
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Classes="bare" Width="26" Height="26"
-                                                            VerticalAlignment="Top"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).RemoveLineCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <Path Classes="icon" Width="15" Height="15"
-                                                              Stroke="{StaticResource Danger}"
-                                                              Data="M6 6 L18 18 M18 6 L6 18" />
-                                                    </Button>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                    <!-- Quantity stepper -->
-                                                    <Border Grid.Column="0" BorderThickness="1"
-                                                            BorderBrush="{StaticResource Accent}"
-                                                            VerticalAlignment="Center">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <Button Classes="qtyStep" Content="−"
-                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).DecrementLineCommand}"
-                                                                    CommandParameter="{Binding}" />
-                                                            <TextBlock Text="{Binding Quantity}" Classes="mono"
-                                                                       Width="30" FontSize="13" FontWeight="Bold"
-                                                                       TextAlignment="Center" VerticalAlignment="Center"
-                                                                       Foreground="{StaticResource TextPrimary}" />
-                                                            <Button Classes="qtyStep" Content="+"
-                                                                    Command="{Binding $parent[ItemsControl].((vm:MaterialSelectionViewModel)DataContext).IncrementLineCommand}"
-                                                                    CommandParameter="{Binding}" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <!-- Editable unit price -->
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                                                VerticalAlignment="Center">
-                                                        <TextBlock Text="@ $" VerticalAlignment="Center" FontSize="13"
-                                                                   Foreground="{StaticResource TextMuted}" />
-                                                        <TextBox Classes="field" Width="74" Padding="6,6"
-                                                                 Text="{Binding UnitPrice}" />
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="2" Text="{Binding LineTotalLabel}"
-                                                               FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
-                                                               Foreground="{StaticResource TextPrimary}" />
-                                                </Grid>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                    <StackPanel Spacing="3">
+                        <TextBlock Classes="fieldLabel" Text="{Binding NewCategoryLabelText}" />
+                        <TextBox Classes="field" Text="{Binding NewCategoryName}"
+                                 PlaceholderText="{Binding CategoryPlaceholderText}" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Button Grid.Column="0" Classes="primary" Padding="12,12"
+                                Command="{Binding SaveNewCategoryCommand}" Content="{Binding SaveText}" />
+                        <Button Grid.Column="1" Classes="ghost" Padding="16,12"
+                                Command="{Binding CancelNewCategoryCommand}" Content="{Binding CancelText}" />
                     </Grid>
-                </DockPanel>
+                </StackPanel>
             </Border>
         </Panel>
 
@@ -2212,14 +2436,14 @@
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
             <Border Width="900" Height="600" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="White" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
-                    CornerRadius="16" BoxShadow="0 16 44 0 #33000000">
+                    Background="{StaticResource Surface}" BorderBrush="{StaticResource HairLine}" BorderThickness="1"
+                    CornerRadius="7" BoxShadow="0 16 44 0 #33000000">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,24,0">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="mono" Text="ADMINISTRATION" FontSize="11" FontWeight="Bold"
                                        Foreground="{StaticResource TextMuted}" />
-                            <TextBlock Text="{Binding SettingsCenterText}" FontFamily="Georgia, serif" FontSize="27"
+                            <TextBlock Text="{Binding SettingsCenterText}" FontFamily="{StaticResource HeadingFont}" FontSize="27"
                                        FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                             <TextBlock Text="{Binding SettingsDescriptionText}"
                                        FontSize="13" Foreground="{StaticResource TextMuted}" />
@@ -2234,7 +2458,7 @@
 
                     <!-- Settings-style sidebar navigation -->
                     <Grid ColumnDefinitions="220,*">
-                        <Border Grid.Column="0" Background="#FAFAFA"
+                        <Border Grid.Column="0" Background="#EDECEB"
                                 BorderBrush="{StaticResource HairLine}" BorderThickness="0,0,1,0"
                                 Padding="14,22">
                             <StackPanel Spacing="6">
@@ -2244,7 +2468,7 @@
                                         Command="{Binding SelectSettingsTabCommand}" CommandParameter="Units"
                                         HorizontalContentAlignment="Left">
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E5E7EB">
+                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E0DEDC">
                                             <Path Classes="icon" Width="15" Height="15" Data="M5 5 H19 M5 12 H19 M5 19 H19" />
                                         </Border>
                                         <TextBlock Text="{Binding UnitsText}" VerticalAlignment="Center" />
@@ -2254,7 +2478,7 @@
                                         Command="{Binding SelectSettingsTabCommand}" CommandParameter="Users"
                                         HorizontalContentAlignment="Left">
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E5E7EB">
+                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E0DEDC">
                                             <Path Classes="icon" Width="15" Height="15"
                                                   Data="M12 11 a3 3 0 1 0 0.01 0 M6 20 a6 6 0 0 1 12 0" />
                                         </Border>
@@ -2265,11 +2489,22 @@
                                         Command="{Binding SelectSettingsTabCommand}" CommandParameter="System"
                                         HorizontalContentAlignment="Left">
                                     <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E5E7EB">
+                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E0DEDC">
                                             <Path Classes="icon" Width="15" Height="15"
                                                   Data="M12 3 V21 M3 12 H21 M5.6 5.6 L18.4 18.4 M18.4 5.6 L5.6 18.4" />
                                         </Border>
                                         <TextBlock Text="{Binding SystemText}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="settingsTab" Classes.active="{Binding IsBackupSettingsTab}"
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="Backup"
+                                        HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="28" Height="28" CornerRadius="7" Background="#E0DEDC">
+                                            <Path Classes="icon" Width="15" Height="15"
+                                                  Data="M6 16 a4 4 0 0 1 1 -7.9 A5 5 0 0 1 17 8 a3.5 3.5 0 0 1 -0.5 7 H7 M12 9 V15 M9.5 12.5 L12 15 L14.5 12.5" />
+                                        </Border>
+                                        <TextBlock Text="{Binding BackupText}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -2280,7 +2515,7 @@
                         <!-- Units tab -->
                         <StackPanel IsVisible="{Binding IsUnitsSettingsTab}" Spacing="16">
                             <StackPanel Spacing="3">
-                                <TextBlock Text="Units" FontFamily="Georgia, serif" FontSize="21"
+                                <TextBlock Text="Units" FontFamily="{StaticResource HeadingFont}" FontSize="21"
                                            FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="{Binding UnitsText}"
                                            FontSize="13" Foreground="{StaticResource TextMuted}" />
@@ -2313,7 +2548,7 @@
                         <!-- Users tab -->
                         <StackPanel IsVisible="{Binding IsUsersSettingsTab}" Spacing="16">
                             <StackPanel Spacing="3">
-                                <TextBlock Text="Users" FontFamily="Georgia, serif" FontSize="21"
+                                <TextBlock Text="Users" FontFamily="{StaticResource HeadingFont}" FontSize="21"
                                            FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="Register a Cambodian phone number for staff sign-in."
                                            FontSize="13" Foreground="{StaticResource TextMuted}" />
@@ -2357,7 +2592,7 @@
                         <!-- System tab -->
                         <StackPanel IsVisible="{Binding IsSystemSettingsTab}" Spacing="18">
                             <StackPanel Spacing="3">
-                                <TextBlock Text="System" FontFamily="Georgia, serif" FontSize="21"
+                                <TextBlock Text="System" FontFamily="{StaticResource HeadingFont}" FontSize="21"
                                            FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="{Binding SystemText}"
                                            FontSize="13" Foreground="{StaticResource TextMuted}" />
@@ -2385,6 +2620,68 @@
                                     <Button Grid.Column="1" Classes="secondary" Content="Sign out"
                                             Command="{Binding SignOutCommand}" />
                                 </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Backup tab -->
+                        <StackPanel IsVisible="{Binding IsBackupSettingsTab}" Spacing="18">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="{Binding CloudBackupText}" FontFamily="{StaticResource HeadingFont}"
+                                           FontSize="21" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="{Binding BackupDescriptionText}" FontSize="13" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextMuted}" MaxWidth="540"
+                                           HorizontalAlignment="Left" />
+                            </StackPanel>
+
+                            <Border BorderBrush="{StaticResource HairLine}" BorderThickness="1" CornerRadius="10"
+                                    Padding="18" MaxWidth="560" HorizontalAlignment="Left">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto" RowSpacing="10">
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding BackupStateText}"
+                                                   FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono" Text="{Binding SyncLabel}"
+                                                   FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding BackupServerText}"
+                                                   FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding BackupEndpoint}"
+                                                   FontSize="12" Foreground="{StaticResource TextMuted}"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{StaticResource HairLine}" />
+
+                                    <!-- Auto-backup interval: applies immediately on change -->
+                                    <Grid ColumnDefinitions="*,160" ColumnSpacing="14">
+                                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding BackupIntervalText}" FontSize="13"
+                                                       FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
+                                            <TextBlock Text="{Binding BackupModeText}" FontSize="12" TextWrapping="Wrap"
+                                                       Foreground="{StaticResource TextMuted}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1" Classes="field" VerticalAlignment="Center"
+                                                  ItemsSource="{Binding BackupIntervals}"
+                                                  SelectedItem="{Binding SelectedBackupInterval}"
+                                                  IsEnabled="{Binding BackupEnabled}" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{StaticResource HairLine}" />
+
+                                    <TextBlock Text="{Binding BackupStatus}" FontSize="13" TextWrapping="Wrap"
+                                               Foreground="{StaticResource TextPrimary}" />
+
+                                    <Button Classes="primary" HorizontalAlignment="Left" Padding="18,11"
+                                            Command="{Binding BackupNowCommand}" IsEnabled="{Binding BackupEnabled}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <Path Classes="icon" Width="16" Height="16" Stroke="{StaticResource Accent}"
+                                                  Data="M6 16 a4 4 0 0 1 1 -7.9 A5 5 0 0 1 17 8 a3.5 3.5 0 0 1 -0.5 7 H7 M12 9 V15 M9.5 12.5 L12 15 L14.5 12.5" />
+                                            <TextBlock Text="{Binding BackupNowText}" FontWeight="Bold"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                         </StackPanel>

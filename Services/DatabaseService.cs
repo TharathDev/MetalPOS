@@ -61,7 +61,8 @@ public class DatabaseService
             TotalAmount     REAL     NOT NULL,
             AmountPaid      REAL     NOT NULL DEFAULT 0,
             ChangeDue       REAL     NOT NULL DEFAULT 0,
-            PaymentMethod   TEXT     NOT NULL
+            PaymentMethod   TEXT     NOT NULL,
+            InvoiceFormat   TEXT     NOT NULL DEFAULT 'Detailed'
         )",
         @"CREATE TABLE IF NOT EXISTS Shops (
             Id            TEXT PRIMARY KEY,
@@ -192,6 +193,7 @@ public class DatabaseService
             ("TaxAmount",       "REAL NOT NULL DEFAULT 0"),
             ("AmountPaid",      "REAL NOT NULL DEFAULT 0"),
             ("ChangeDue",       "REAL NOT NULL DEFAULT 0"),
+            ("InvoiceFormat",   "TEXT NOT NULL DEFAULT 'Detailed'"),
         });
 
         AddMissingColumns(connection, "SaleItems", new (string Name, string Definition)[]
@@ -617,6 +619,71 @@ public class DatabaseService
         return (columns, rows);
     }
 
+    /// <summary>
+    /// Returns the live <c>CREATE</c> statements for exactly the <see cref="BackupTables"/>
+    /// (tables first in FK-safe order, then their indexes), read straight from the
+    /// local database's <c>sqlite_master</c>. The remote backup uses this instead of
+    /// the static schema so the recreated remote tables always match the columns the
+    /// snapshot actually inserts — even after a migration adds a column locally.
+    /// Objects belonging to non-backup tables (e.g. Users) are deliberately excluded.
+    /// </summary>
+    public List<string> GetBackupSchema()
+    {
+        var statements = new List<string>();
+        using var connection = OpenConnection();
+
+        // Tables, in the declared FK-safe order.
+        foreach (var table in BackupTables)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText =
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $n AND sql IS NOT NULL;";
+            cmd.Parameters.AddWithValue("$n", table);
+            if (cmd.ExecuteScalar() is string sql && !string.IsNullOrWhiteSpace(sql))
+                statements.Add(sql);
+        }
+
+        // Explicit indexes on those tables (auto-indexes have a NULL sql and are skipped).
+        foreach (var table in BackupTables)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText =
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = $n AND sql IS NOT NULL;";
+            cmd.Parameters.AddWithValue("$n", table);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                if (!reader.IsDBNull(0))
+                    statements.Add(reader.GetString(0));
+            }
+        }
+
+        return statements;
+    }
+
+    /// <summary>Reads a value from the AppState key/value store, or null if absent.</summary>
+    public string? GetAppState(string key)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Value FROM AppState WHERE Key = $k LIMIT 1;";
+        cmd.Parameters.AddWithValue("$k", key);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    /// <summary>Inserts or updates a value in the AppState key/value store.</summary>
+    public void SetAppState(string key, string value)
+    {
+        using var connection = OpenConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            "INSERT INTO AppState (Key, Value) VALUES ($k, $v) " +
+            "ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value;";
+        cmd.Parameters.AddWithValue("$k", key);
+        cmd.Parameters.AddWithValue("$v", value);
+        cmd.ExecuteNonQuery();
+    }
+
     public Product? GetProductById(long id)
     {
         using var connection = OpenConnection();
@@ -715,11 +782,11 @@ public class DatabaseService
                 INSERT INTO Sales
                     (ReceiptNo, Timestamp, CustomerName, CustomerPhone, CustomerAddress, Note,
                      Subtotal, Discount, TaxRate, TaxAmount, TotalAmount, AmountPaid, ChangeDue,
-                     PaymentMethod)
+                     PaymentMethod, InvoiceFormat)
                 VALUES
                     ($no, $ts, $cname, $cphone, $caddr, $note,
                      $subtotal, $discount, $taxRate, $tax, $total, $paid, $change,
-                     $method);
+                     $method, $format);
                 SELECT last_insert_rowid();";
             saleCmd.Parameters.AddWithValue("$no", receiptNo);
             saleCmd.Parameters.AddWithValue("$ts", sale.Timestamp);
@@ -735,6 +802,7 @@ public class DatabaseService
             saleCmd.Parameters.AddWithValue("$paid", sale.AmountPaid);
             saleCmd.Parameters.AddWithValue("$change", sale.ChangeDue);
             saleCmd.Parameters.AddWithValue("$method", sale.PaymentMethod);
+            saleCmd.Parameters.AddWithValue("$format", sale.InvoiceFormat ?? "Detailed");
             saleId = Convert.ToInt64(saleCmd.ExecuteScalar());
         }
 
@@ -861,7 +929,7 @@ public class DatabaseService
     private const string SaleSelectSql = @"
         SELECT s.Id, s.ReceiptNo, s.Timestamp, s.CustomerName, s.CustomerPhone, s.CustomerAddress,
                s.Note, s.Subtotal, s.Discount, s.TaxRate, s.TaxAmount, s.TotalAmount,
-               s.AmountPaid, s.ChangeDue, s.PaymentMethod,
+               s.AmountPaid, s.ChangeDue, s.PaymentMethod, s.InvoiceFormat,
                COALESCE(SUM(si.Quantity), 0) AS ItemCount
         FROM Sales s
         LEFT JOIN SaleItems si ON si.SaleId = s.Id";
@@ -883,7 +951,8 @@ public class DatabaseService
         AmountPaid = reader.IsDBNull(12) ? 0 : reader.GetDouble(12),
         ChangeDue = reader.IsDBNull(13) ? 0 : reader.GetDouble(13),
         PaymentMethod = reader.IsDBNull(14) ? "Cash" : reader.GetString(14),
-        ItemCount = reader.GetInt32(15),
+        InvoiceFormat = reader.IsDBNull(15) ? "Detailed" : reader.GetString(15),
+        ItemCount = reader.GetInt32(16),
     };
 
     /// <summary>

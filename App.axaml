@@ -10,6 +10,13 @@
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <!-- Embedded "Classical" typefaces (OFL, bundled under Assets/Fonts):
+             Cormorant Garamond for headings, Lora for body. -->
+        <FontFamily x:Key="HeadingFont">avares://PosApp/Assets/Fonts#Cormorant Garamond</FontFamily>
+        <FontFamily x:Key="BodyFont">avares://PosApp/Assets/Fonts#Lora</FontFamily>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>

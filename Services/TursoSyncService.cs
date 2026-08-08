@@ -42,6 +42,7 @@ public class TursoSyncService
     private readonly string? _authToken;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _loopCts;
+    private TimeSpan _interval = TimeSpan.FromHours(1);
 
     public TursoSyncService(DatabaseService db)
     {
@@ -100,6 +101,9 @@ public class TursoSyncService
         return null;
     }
 
+    /// <summary>The interval currently used by the background backup loop.</summary>
+    public TimeSpan Interval => _interval;
+
     /// <summary>
     /// Starts a background loop that performs a backup shortly after startup and
     /// then every <paramref name="interval"/> (default 1 hour). Safe to call once.
@@ -113,17 +117,43 @@ public class TursoSyncService
             return;
         }
 
+        _interval = interval;
+        RestartLoop(immediateFirst: true);
+    }
+
+    /// <summary>
+    /// Changes the automatic backup interval and reschedules the loop to use it.
+    /// Does not trigger an immediate backup (the next one fires after the new
+    /// interval elapses). No-op when backups are disabled.
+    /// </summary>
+    public void SetInterval(TimeSpan interval)
+    {
+        if (!Enabled || interval <= TimeSpan.Zero)
+            return;
+
+        _interval = interval;
+        RestartLoop(immediateFirst: false);
+        Raise(new SyncStatus(true, true, DateTime.Now,
+            $"Auto-backup interval set to {DescribeInterval(interval)}."));
+    }
+
+    private void RestartLoop(bool immediateFirst)
+    {
         _loopCts?.Cancel();
         _loopCts = new CancellationTokenSource();
         var ct = _loopCts.Token;
+        var interval = _interval;
 
         _ = Task.Run(async () =>
         {
             try
             {
-                // Small delay so the first backup doesn't compete with app startup.
-                await Task.Delay(TimeSpan.FromSeconds(15), ct).ConfigureAwait(false);
-                await SyncNowAsync(ct).ConfigureAwait(false);
+                if (immediateFirst)
+                {
+                    // Small delay so the first backup doesn't compete with app startup.
+                    await Task.Delay(TimeSpan.FromSeconds(15), ct).ConfigureAwait(false);
+                    await SyncNowAsync(ct).ConfigureAwait(false);
+                }
 
                 using var timer = new PeriodicTimer(interval);
                 while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
@@ -131,10 +161,15 @@ public class TursoSyncService
             }
             catch (OperationCanceledException)
             {
-                // Normal on shutdown.
+                // Normal on shutdown or when the interval changes.
             }
         }, ct);
     }
+
+    private static string DescribeInterval(TimeSpan t) =>
+        t.TotalHours >= 1 && t.TotalMinutes % 60 == 0
+            ? $"{(int)t.TotalHours} hour(s)"
+            : $"{(int)t.TotalMinutes} min";
 
     /// <summary>Stops the background backup loop.</summary>
     public void Stop() => _loopCts?.Cancel();
@@ -186,13 +221,24 @@ public class TursoSyncService
         string url = _httpBase;
         string? baton = null;
 
-        // Phase 1: open transaction, then rebuild the remote tables from scratch.
-        // Dropping rather than DELETEing guarantees the remote schema matches the
-        // local one even after a local migration adds columns.
-        var setup = new List<object> { Exec("BEGIN") };
+        // Phase 1: rebuild the remote tables from scratch. Dropping rather than
+        // DELETEing guarantees the remote schema matches the local one even after a
+        // local migration adds columns. The CREATE statements are read from the LIVE
+        // local schema (not a static copy) so the recreated remote columns always
+        // match the rows we insert below.
+        //
+        // foreign_keys is turned OFF (outside the transaction) so dropping a parent
+        // table like Shops can't fail on a stale child row, and "Users" — an older
+        // table this backup no longer manages — is dropped to clear historic drift.
+        var setup = new List<object>
+        {
+            Exec("PRAGMA foreign_keys=OFF"),
+            Exec("BEGIN"),
+            Exec("DROP TABLE IF EXISTS Users"),
+        };
         foreach (var table in Enumerable.Reverse(DatabaseService.BackupTables))
             setup.Add(Exec($"DROP TABLE IF EXISTS {table}"));
-        foreach (var stmt in DatabaseService.SchemaStatements)
+        foreach (var stmt in _db.GetBackupSchema())
             setup.Add(Exec(stmt));
 
         (url, baton) = await PostPipelineAsync(url, baton, setup, close: false, ct).ConfigureAwait(false);

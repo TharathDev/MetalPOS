@@ -36,6 +36,9 @@ public class Sale
     public double ChangeDue { get; set; }
     public string PaymentMethod { get; set; } = "Cash";
 
+    /// <summary>Document layout used when this sale was printed.</summary>
+    public string InvoiceFormat { get; set; } = "Detailed";
+
     public List<SaleItem> Items { get; set; } = new();
 
     /// <summary>Total number of units sold (populated by history queries).</summary>

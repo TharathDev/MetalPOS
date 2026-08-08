@@ -5,60 +5,72 @@
         x:DataType="vm:LoginViewModel"
         Width="460" Height="580" MinWidth="420" MinHeight="540"
         CanResize="False" WindowStartupLocation="CenterScreen"
-        Background="#FFFFFF" Title="METALS_POS — Sign in">
+        Background="#F3F2F2" FontFamily="{StaticResource BodyFont}"
+        Title="METALS_POS — Sign in">
     <Window.Resources>
-        <SolidColorBrush x:Key="Accent" Color="#C2410C" />
-        <SolidColorBrush x:Key="TextPrimary" Color="#1F2937" />
-        <SolidColorBrush x:Key="TextMuted" Color="#6B7280" />
-        <SolidColorBrush x:Key="HairLine" Color="#E5E7EB" />
-        <SolidColorBrush x:Key="Danger" Color="#DC2626" />
+        <SolidColorBrush x:Key="Accent" Color="#B68235" />
+        <SolidColorBrush x:Key="AccentDark" Color="#7D5411" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#201F1D" />
+        <SolidColorBrush x:Key="TextMuted" Color="#7C7A78" />
+        <SolidColorBrush x:Key="HairLine" Color="#D2D1CF" />
+        <SolidColorBrush x:Key="Danger" Color="#B23B2E" />
     </Window.Resources>
     <Window.Styles>
         <Style Selector="TextBox.loginField">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#D2D1CF" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="12,10" />
             <Setter Property="FontSize" Value="15" />
         </Style>
+        <!-- Classical: outlined gold primary, not a solid block. -->
         <Style Selector="Button.loginPrimary">
-            <Setter Property="Background" Value="{StaticResource Accent}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="14,12" />
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.loginPrimary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#22B68235" />
         </Style>
     </Window.Styles>
     <Grid RowDefinitions="*,Auto">
         <StackPanel Grid.Row="0" Margin="44,48,44,0" Spacing="18">
             <StackPanel Spacing="5">
-                <TextBlock Text="METALS_POS" FontFamily="Consolas, Menlo, monospace" FontSize="25"
-                           FontWeight="Bold" LetterSpacing="1.5" Foreground="{StaticResource Accent}" />
-                <TextBlock Text="INVENTORY MANAGER" FontFamily="Consolas, Menlo, monospace" FontSize="11"
-                           LetterSpacing="1.2" Foreground="{StaticResource TextMuted}" />
+                <TextBlock Text="METALS_POS" FontFamily="{StaticResource BodyFont}" FontSize="25"
+                           FontWeight="Bold" LetterSpacing="1.2" Foreground="{StaticResource Accent}" />
+                <TextBlock Text="INVENTORY MANAGER" FontFamily="{StaticResource BodyFont}" FontSize="11"
+                           LetterSpacing="1.0" Foreground="{StaticResource TextMuted}" />
             </StackPanel>
 
             <StackPanel Margin="0,24,0,0" Spacing="7">
-                <TextBlock Text="Welcome back" FontFamily="Georgia, serif" FontSize="28" FontWeight="Bold"
+                <TextBlock Text="Welcome back" FontFamily="{StaticResource HeadingFont}"
+                           FontSize="30" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimary}" />
                 <TextBlock Text="Sign in with your Cambodian phone number to continue."
                            FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" />
             </StackPanel>
 
             <StackPanel Spacing="6">
-                <TextBlock Text="PHONE NUMBER" FontFamily="Consolas, Menlo, monospace" FontSize="11"
-                           FontWeight="Bold" LetterSpacing="1" Foreground="{StaticResource TextMuted}" />
+                <TextBlock Text="PHONE NUMBER" FontFamily="{StaticResource BodyFont}" FontSize="11"
+                           FontWeight="Bold" LetterSpacing="0.8" Foreground="{StaticResource TextMuted}" />
                 <TextBox Classes="loginField" Text="{Binding PhoneNumber}"
                          PlaceholderText="012 345 678 or +855 12 345 678" />
             </StackPanel>
             <StackPanel Spacing="6">
-                <TextBlock Text="PASSWORD" FontFamily="Consolas, Menlo, monospace" FontSize="11"
-                           FontWeight="Bold" LetterSpacing="1" Foreground="{StaticResource TextMuted}" />
+                <TextBlock Text="PASSWORD" FontFamily="{StaticResource BodyFont}" FontSize="11"
+                           FontWeight="Bold" LetterSpacing="0.8" Foreground="{StaticResource TextMuted}" />
                 <TextBox Classes="loginField" Text="{Binding Password}" PasswordChar="●"
                          PlaceholderText="Enter your password" />
             </StackPanel>
-            <Border IsVisible="{Binding HasError}" Background="#FEF2F2" BorderBrush="#FECACA"
-                    BorderThickness="1" Padding="11,9">
+            <Border IsVisible="{Binding HasError}" Background="#F8ECEA" BorderBrush="#E3BDB7"
+                    BorderThickness="1" CornerRadius="4" Padding="11,9">
                 <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
                            Foreground="{StaticResource Danger}" />
             </Border>

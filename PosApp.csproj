@@ -1,12 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Builds and runs on whichever .NET version is installed (9 or 10). -->
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
-    <!--
-      Use the highest C# version supported by the active SDK.
-      'preview' only makes sense on the net10.0 TFM; 'latest' is safe for both.
-    -->
-    <LangVersion>latest</LangVersion>
+    <!-- Keep the project compatible with the installed .NET 9 SDK. -->
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
     <OutputType>WinExe</OutputType>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -41,10 +37,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <!--
-      9.0.6 is the last release compatible with both net9.0 and net10.0.
-      Pinning here avoids NuGet pulling in a net10-only patch on the .NET 9 machine.
-    -->
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
   </ItemGroup>
 </Project>

@@ -34,12 +34,23 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         Units = new ObservableCollection<string> { "ea", "mm", "cm", "dm", "m", "in", "ft", "cm²", "dm²", "m²", "sheet", "box", "pair", "kg", "roll" };
         Languages = new ObservableCollection<string> { "English", "ខ្មែរ (កម្ពុជា)", "Chinese", "Vietnamese" };
         Users = new ObservableCollection<string>();
+        BackupIntervals = new ObservableCollection<string>
+        {
+            "10 minutes", "15 minutes", "30 minutes", "45 minutes", "1 hour", "2 hours", "3 hours",
+        };
 
         if (_sync is not null)
         {
             SyncLabel = _sync.Enabled ? "BACKUP: PENDING" : "BACKUP: OFF";
             _sync.StatusChanged += OnSyncStatusChanged;
         }
+
+        // Show the saved auto-backup interval in the dropdown. App startup already
+        // started the loop with this value, so suppress the change handler here so we
+        // don't reschedule (and re-persist) it on load.
+        var savedMinutes = ParseIntervalMinutes(_db.GetAppState(BackupIntervalKey)) ?? 60;
+        SelectedBackupInterval = LabelForMinutes(savedMinutes);
+        _applyIntervalChanges = true;
 
         SafeLoadAll();
     }
@@ -74,6 +85,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         try
         {
             LoadCategories();
+            LoadCatalogItems();
             LoadStock();
             LoadOrders();
             LoadUsers();
@@ -123,10 +135,53 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTechnicalPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(CartPanelWidth))]
+    [NotifyPropertyChangedFor(nameof(ShowCartRail))]
+    [NotifyPropertyChangedFor(nameof(ShowCartContents))]
     public partial bool IsWideLayout { get; set; }
 
-    /// <summary>The technical sidebar is useful only on a wide Inventory layout.</summary>
-    public bool IsTechnicalPanelVisible => IsInventorySection && IsWideLayout;
+    /// <summary>The cart shows on the Inventory screen at any width.</summary>
+    public bool IsTechnicalPanelVisible => IsInventorySection;
+
+    /// <summary>Full cart width on a wide screen (always expanded).</summary>
+    public const double CartWidePanelWidth = 300d;
+
+    /// <summary>Width of the collapsed cart rail shown on smaller screens.</summary>
+    public const double CartRailWidth = 138d;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CartPanelWidth))]
+    [NotifyPropertyChangedFor(nameof(ShowCartRail))]
+    [NotifyPropertyChangedFor(nameof(ShowCartContents))]
+    public partial bool IsCartExpanded { get; set; }
+
+    /// <summary>Width the rail grows to when focused on a smaller screen (~half the window).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CartPanelWidth))]
+    public partial double CartExpandedWidth { get; set; } = 460d;
+
+    /// <summary>
+    /// Wide screens keep the cart permanently open; smaller screens show a thin rail
+    /// that grows to half the window when focused.
+    /// </summary>
+    public double CartPanelWidth => IsWideLayout
+        ? CartWidePanelWidth
+        : (IsCartExpanded ? CartExpandedWidth : CartRailWidth);
+
+    /// <summary>Show the thin rail only on a smaller screen that isn't currently focused.</summary>
+    public bool ShowCartRail => !IsWideLayout && !IsCartExpanded;
+
+    /// <summary>Show the full cart contents on wide screens, or when the rail is focused.</summary>
+    public bool ShowCartContents => IsWideLayout || IsCartExpanded;
+
+    /// <summary>Clicking the cart rail (smaller screens) toggles between the rail and the full view.</summary>
+    [RelayCommand]
+    private void ToggleCartExpanded()
+    {
+        if (IsWideLayout)
+            return;
+        IsCartExpanded = !IsCartExpanded;
+    }
 
     /// <summary>Called by the window when its width changes.</summary>
     public void UpdateResponsiveLayout(double width)
@@ -134,14 +189,23 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         IsWideLayout = width >= 1440;
         CategoryColumns = IsWideLayout ? 4 : 3;
 
-        // 224 sidebar + optional 300 specs + 40 effective content inset.
+        // Wide screens reserve the full cart; smaller screens reserve only the thin rail.
+        var reservedCartWidth = IsWideLayout ? CartWidePanelWidth : CartRailWidth;
+
+        // 224 sidebar + reserved cart + 40 effective content inset.
         // Subtract the 16px per-card margin after dividing into equal cells.
-        var specsWidth = IsWideLayout ? 300d : 0d;
-        var gridWidth = Math.Max(720d, width - 224d - specsWidth - 40d);
+        var gridWidth = Math.Max(720d, width - 224d - reservedCartWidth - 40d);
         CategoryCardWidth = Math.Floor(gridWidth / CategoryColumns) - 16d;
 
         foreach (var category in Categories)
             category.CardWidth = CategoryCardWidth;
+
+        // On a smaller screen the focused rail occupies half the window, with a sane minimum.
+        CartExpandedWidth = Math.Max(360d, Math.Floor(width * 0.5d));
+
+        // A wide layout is always fully open, never in the collapsed/expanded rail state.
+        if (IsWideLayout)
+            IsCartExpanded = false;
 
         // Cart drawer occupies 3/10 of the window, with a sane minimum.
         CartDrawerWidth = Math.Max(320d, Math.Floor(width * 0.3d));
@@ -180,19 +244,74 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         "OrderDetail" => "Full detail of the selected order. Reprint the receipt any time.",
         "Checkout" => "Verify quantities and pricing, add customer details, then complete the sale.",
         "Complete" => "The sale has been recorded, stock updated, and the receipt sent to print.",
-        _ => "Select a category to view specific stock dimensions and pricing.",
+        _ => IsKhmer
+            ? "ជ្រើសរើសប្រភេទដើម្បីត្រង ឬរកមើលបញ្ជីទាំងមូលខាងក្រោម។"
+            : "Choose a category to see stock, dimensions and pricing.",
     };
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
-    partial void OnSearchTextChanged(string value) => LoadStock();
+    partial void OnSearchTextChanged(string value)
+    {
+        LoadStock();
+        LoadCatalogItems();
+    }
 
     [ObservableProperty]
     public partial string SyncLabel { get; set; } = "SYNC: LIVE";
 
     [ObservableProperty]
     public partial string BackupStatus { get; set; } = "Cloud backup: waiting for first run.";
+
+    // ---- Auto-backup interval ----
+    private const string BackupIntervalKey = "BackupIntervalMinutes";
+    private bool _applyIntervalChanges;
+
+    /// <summary>Interval choices offered in the Backup settings tab.</summary>
+    public ObservableCollection<string> BackupIntervals { get; }
+
+    [ObservableProperty]
+    public partial string SelectedBackupInterval { get; set; } = "1 hour";
+
+    partial void OnSelectedBackupIntervalChanged(string value)
+    {
+        // Ignore the initial assignment during construction.
+        if (!_applyIntervalChanges)
+            return;
+
+        var minutes = MinutesForLabel(value);
+        _sync?.SetInterval(TimeSpan.FromMinutes(minutes));
+        try { _db.SetAppState(BackupIntervalKey, minutes.ToString(CultureInfo.InvariantCulture)); }
+        catch { /* persistence is best-effort; the interval still applies this session */ }
+    }
+
+    private static int MinutesForLabel(string? label) => label switch
+    {
+        "10 minutes" => 10,
+        "15 minutes" => 15,
+        "30 minutes" => 30,
+        "45 minutes" => 45,
+        "1 hour" => 60,
+        "2 hours" => 120,
+        "3 hours" => 180,
+        _ => 60,
+    };
+
+    private static string LabelForMinutes(int minutes) => minutes switch
+    {
+        10 => "10 minutes",
+        15 => "15 minutes",
+        30 => "30 minutes",
+        45 => "45 minutes",
+        60 => "1 hour",
+        120 => "2 hours",
+        180 => "3 hours",
+        _ => "1 hour",
+    };
+
+    private static int? ParseIntervalMinutes(string? raw) =>
+        int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var m) && m > 0 ? m : null;
 
     // ==================== Settings ====================
 
@@ -218,6 +337,18 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public string UnitsText => IsKhmer ? "ឯកតា" : "Units";
     public string UsersText => IsKhmer ? "អ្នកប្រើប្រាស់" : "Users";
     public string SystemText => IsKhmer ? "ប្រព័ន្ធ" : "System";
+    public string BackupText => IsKhmer ? "បម្រុងទុក" : "Backup";
+    public string CloudBackupText => IsKhmer ? "បម្រុងទុកលើ Cloud" : "Cloud Backup";
+    public string BackupNowText => IsKhmer ? "បម្រុងទុកឥឡូវនេះ" : "Back up now";
+    public string BackupDescriptionText => IsKhmer
+        ? "រក្សាទុកច្បាប់ចម្លងទិន្នន័យរបស់អ្នកទៅម៉ាស៊ីនមេ Turso ។ ទិន្នន័យក្នុងម៉ាស៊ីនគឺជាប្រភពចម្បង។"
+        : "Push a full snapshot of your data to the Turso server. The local database stays the source of truth.";
+    public string BackupModeText => IsKhmer
+        ? "បម្រុងទុកដោយស្វ័យប្រវត្តិរៀងរាល់មួយម៉ោង ខណៈកម្មវិធីកំពុងដំណើរការ។"
+        : "Runs automatically every hour while the app is open, and immediately when you press Back up now.";
+    public string BackupServerText => IsKhmer ? "ម៉ាស៊ីនមេ" : "Server";
+    public string BackupStateText => IsKhmer ? "ស្ថានភាព" : "Status";
+    public string BackupIntervalText => IsKhmer ? "ចន្លោះពេលបម្រុងទុកដោយស្វ័យប្រវត្តិ" : "Auto-backup interval";
     public string AddUnitText => IsKhmer ? "បន្ថែមឯកតា" : "Add unit";
     public string AddUserText => IsKhmer ? "បន្ថែមអ្នកប្រើប្រាស់" : "Add user";
     public string InterfaceLanguageText => IsKhmer ? "ភាសាកម្មវិធី" : "Interface language";
@@ -247,6 +378,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public string UpdateItemText => L("Update Item", "ធ្វើបច្ចុប្បន្នភាពទំនិញ");
     public string AddItemText => L("Add Item", "បន្ថែមទំនិញ");
     public string ClearText => L("Clear", "សម្អាត");
+    public string NewCategoryTitleText => L("New Category", "ប្រភេទថ្មី");
+    public string NewCategoryLabelText => L("CATEGORY NAME", "ឈ្មោះប្រភេទ");
+    public string SaveText => L("Save", "រក្សាទុក");
+    public string CancelText => L("Cancel", "បោះបង់");
     public string SearchMaterialsPlaceholder => L("Search materials, SKU, or categories...", "ស្វែងរកសម្ភារៈ លេខកូដ ឬប្រភេទ...");
     public string LiveInventoryText => L("LIVE INVENTORY", "ស្តុកបន្តផ្ទាល់");
     public string OrdersSummaryDisplay => IsKhmer && OrdersSummary == "No sales yet." ? "មិនទាន់មានការលក់ទេ។" : OrdersSummary;
@@ -306,6 +441,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsUnitsSettingsTab))]
     [NotifyPropertyChangedFor(nameof(IsUsersSettingsTab))]
     [NotifyPropertyChangedFor(nameof(IsSystemSettingsTab))]
+    [NotifyPropertyChangedFor(nameof(IsBackupSettingsTab))]
     public partial string SettingsTab { get; set; } = "Units";
 
     [ObservableProperty]
@@ -314,6 +450,13 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public bool IsUnitsSettingsTab => SettingsTab == "Units";
     public bool IsUsersSettingsTab => SettingsTab == "Users";
     public bool IsSystemSettingsTab => SettingsTab == "System";
+    public bool IsBackupSettingsTab => SettingsTab == "Backup";
+
+    /// <summary>True when a Turso auth token/URL is configured so backups can run.</summary>
+    public bool BackupEnabled => _sync?.Enabled ?? false;
+
+    /// <summary>The remote endpoint host, safe to display (no secrets).</summary>
+    public string BackupEndpoint => _sync?.Endpoint ?? "Not configured";
 
     [RelayCommand]
     private void OpenSettings()
@@ -329,7 +472,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [RelayCommand]
     private void SelectSettingsTab(string? tab)
     {
-        if (tab is "Units" or "Users" or "System")
+        if (tab is "Units" or "Users" or "System" or "Backup")
             SettingsTab = tab;
     }
 
@@ -442,6 +585,8 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     partial void OnSelectedLanguageChanged(string value)
     {
         OnPropertyChanged(nameof(IsKhmer));
+        OnPropertyChanged(nameof(CatalogSummaryText));
+        LoadCatalogItems();
         OnPropertyChanged(nameof(NavInventoryText));
         OnPropertyChanged(nameof(NavStockText));
         OnPropertyChanged(nameof(NavOrdersText));
@@ -453,6 +598,14 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         OnPropertyChanged(nameof(UnitsText));
         OnPropertyChanged(nameof(UsersText));
         OnPropertyChanged(nameof(SystemText));
+        OnPropertyChanged(nameof(BackupText));
+        OnPropertyChanged(nameof(CloudBackupText));
+        OnPropertyChanged(nameof(BackupNowText));
+        OnPropertyChanged(nameof(BackupDescriptionText));
+        OnPropertyChanged(nameof(BackupModeText));
+        OnPropertyChanged(nameof(BackupServerText));
+        OnPropertyChanged(nameof(BackupStateText));
+        OnPropertyChanged(nameof(BackupIntervalText));
         OnPropertyChanged(nameof(AddUnitText));
         OnPropertyChanged(nameof(AddUserText));
         OnPropertyChanged(nameof(InterfaceLanguageText));
@@ -480,6 +633,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         OnPropertyChanged(nameof(NewItemText));
         OnPropertyChanged(nameof(UpdateItemText));
         OnPropertyChanged(nameof(AddItemText));
+        OnPropertyChanged(nameof(NewCategoryTitleText));
+        OnPropertyChanged(nameof(NewCategoryLabelText));
+        OnPropertyChanged(nameof(SaveText));
+        OnPropertyChanged(nameof(CancelText));
         OnPropertyChanged(nameof(ClearText));
         OnPropertyChanged(nameof(SearchMaterialsPlaceholder));
         OnPropertyChanged(nameof(LiveInventoryText));
@@ -515,6 +672,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectionText));
         OnPropertyChanged(nameof(AddToCartText));
         OnPropertyChanged(nameof(AddToCartUpperText));
+        OnPropertyChanged(nameof(DetailStockText));
+        OnPropertyChanged(nameof(DetailUnitPriceLabel));
+        OnPropertyChanged(nameof(DetailQuantityLabel));
+        OnPropertyChanged(nameof(DetailLineTotalTitle));
         OnPropertyChanged(nameof(TechnicalDocumentationText));
         OnPropertyChanged(nameof(CertificationText));
 
@@ -559,6 +720,166 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             IsCustom = true,
             CardWidth = CategoryCardWidth,
         });
+
+        foreach (var c in Categories)
+            c.IsFilterActive = !c.IsCustom && c.Name == SelectedCategoryFilter;
+    }
+
+    /// <summary>
+    /// Products shown in the catalog grid: every product, narrowed by the search box
+    /// and/or the active category filter pill. This is the "flat product list" the
+    /// catalog now shows by default (categories are a filter row above it, not a
+    /// separate browse-by-category step).
+    /// </summary>
+    public ObservableCollection<Product> CatalogItems { get; } = new();
+
+    [ObservableProperty]
+    public partial string? SelectedCategoryFilter { get; set; }
+
+    /// <summary>Heading shown above the catalog grid, summarizing the active filter/search.</summary>
+    public string CatalogSummaryText
+    {
+        get
+        {
+            var scope = SelectedCategoryFilter ?? (IsKhmer ? "គ្រប់ប្រភេទ" : "All categories");
+            var count = CatalogItems.Count;
+            var withSearch = string.IsNullOrWhiteSpace(SearchText)
+                ? scope
+                : L($"{scope} matching \"{SearchText}\"", $"{scope} ត្រូវនឹង \"{SearchText}\"");
+            return L($"{withSearch} · {count} item(s)", $"{withSearch} · {count} ធាតុ");
+        }
+    }
+
+    private void LoadCatalogItems()
+    {
+        CatalogItems.Clear();
+        var items = _db.SearchProducts(SearchText);
+        if (!string.IsNullOrWhiteSpace(SelectedCategoryFilter))
+        {
+            items = items
+                .Where(p => string.Equals(p.Category, SelectedCategoryFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        foreach (var p in items)
+        {
+            p.CartQuantity = Cart.FirstOrDefault(line => line.ProductId == p.Id)?.Quantity ?? 0;
+            CatalogItems.Add(ApplyProductLanguage(p));
+        }
+
+        OnPropertyChanged(nameof(CatalogSummaryText));
+    }
+
+    /// <summary>Toggles a category filter pill: selecting the active one clears it.</summary>
+    [RelayCommand]
+    private void ToggleCategoryFilter(string? categoryName)
+    {
+        if (string.IsNullOrWhiteSpace(categoryName))
+            return;
+
+        SelectedCategoryFilter = SelectedCategoryFilter == categoryName ? null : categoryName;
+        foreach (var c in Categories)
+            c.IsFilterActive = !c.IsCustom && c.Name == SelectedCategoryFilter;
+
+        LoadCatalogItems();
+    }
+
+    // ==================== Product detail drawer ====================
+    // Tapping a product in the catalog grid opens a focused detail panel where the
+    // unit price and quantity can be adjusted before adding to the cart.
+
+    [ObservableProperty]
+    public partial bool IsProductDetailOpen { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DetailProductName))]
+    [NotifyPropertyChangedFor(nameof(DetailCategoryTag))]
+    [NotifyPropertyChangedFor(nameof(DetailDimensionText))]
+    [NotifyPropertyChangedFor(nameof(DetailStockText))]
+    [NotifyPropertyChangedFor(nameof(DetailLineTotalLabel))]
+    public partial Product? DetailProduct { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DetailLineTotalLabel))]
+    public partial string DetailUnitPriceText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DetailLineTotalLabel))]
+    public partial int DetailQuantity { get; set; } = 1;
+
+    public string DetailProductName => DetailProduct?.Name ?? string.Empty;
+    public string DetailCategoryTag => DetailProduct?.Category ?? string.Empty;
+    public string DetailDimensionText => DetailProduct?.DimensionLabel ?? string.Empty;
+    public string DetailStockText => DetailProduct is null
+        ? string.Empty
+        : L($"{DetailProduct.Stock} {DetailProduct.Unit} available",
+            $"មាន {DetailProduct.Stock} {DetailProduct.LocalizedUnit}");
+    public string DetailUnitPriceLabel => L("Unit price", "តម្លៃឯកតា");
+    public string DetailQuantityLabel => L("Quantity", "បរិមាណ");
+    public string DetailLineTotalTitle => L("Line total", "សរុប");
+
+    public string DetailLineTotalLabel
+    {
+        get
+        {
+            var price = double.TryParse(DetailUnitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var p) && p >= 0
+                ? p
+                : DetailProduct?.Price ?? 0;
+            return $"${price * Math.Max(0, DetailQuantity):0.00}";
+        }
+    }
+
+    /// <summary>Opens the detail drawer for a single product tapped in the catalog grid.</summary>
+    [RelayCommand]
+    private void OpenProductQuickAdd(Product? product)
+    {
+        if (product is null)
+            return;
+
+        DetailProduct = ApplyProductLanguage(product);
+        var existing = Cart.FirstOrDefault(line => line.ProductId == product.Id);
+        DetailUnitPriceText = (existing?.UnitPrice ?? product.Price).ToString("0.00", CultureInfo.InvariantCulture);
+        DetailQuantity = Math.Max(1, existing?.Quantity ?? 1);
+        IsProductDetailOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseProductDetail() => IsProductDetailOpen = false;
+
+    [RelayCommand]
+    private void IncrementDetailQuantity()
+    {
+        if (DetailProduct is not null && DetailQuantity < DetailProduct.Stock)
+            DetailQuantity++;
+    }
+
+    [RelayCommand]
+    private void DecrementDetailQuantity()
+    {
+        if (DetailQuantity > 1)
+            DetailQuantity--;
+    }
+
+    /// <summary>Adds the detail-drawer product to the cart at the chosen price and quantity.</summary>
+    [RelayCommand]
+    private void AddDetailToCart()
+    {
+        var product = DetailProduct;
+        if (product is null || product.Stock <= 0)
+            return;
+
+        var price = double.TryParse(DetailUnitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var p) && p >= 0
+            ? p
+            : product.Price;
+        var qty = Math.Clamp(DetailQuantity, 1, product.Stock);
+
+        var line = EnsureCartLine(product);
+        line.UnitPrice = price;
+        line.Quantity = qty;
+        SyncProductCartQuantity(product.Id, qty);
+        RecalculateCart();
+
+        IsProductDetailOpen = false;
     }
 
     private Product ApplyProductLanguage(Product product)
@@ -580,7 +901,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (IsStockSection)
             LoadStock();
         if (IsInventorySection)
+        {
             LoadCategories();
+            LoadCatalogItems();
+        }
     }
 
     // ==================== "Select Dimensions" modal ====================
@@ -680,7 +1004,22 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public ObservableCollection<string> PaymentMethods { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPaymentCash))]
+    [NotifyPropertyChangedFor(nameof(IsPaymentCard))]
+    [NotifyPropertyChangedFor(nameof(IsPaymentBank))]
     public partial string PaymentMethod { get; set; } = "Cash";
+
+    public bool IsPaymentCash => PaymentMethod == "Cash";
+    public bool IsPaymentCard => PaymentMethod == "Card";
+    public bool IsPaymentBank => PaymentMethod == "Bank Transfer";
+
+    /// <summary>Selects a payment method from the segmented control (design parity).</summary>
+    [RelayCommand]
+    private void SelectPaymentMethod(string? method)
+    {
+        if (!string.IsNullOrWhiteSpace(method))
+            PaymentMethod = method;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ChangeLabel))]
@@ -694,6 +1033,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     public partial string CustomerName { get; set; } = string.Empty;
     [ObservableProperty] public partial string CustomerPhone { get; set; } = string.Empty;
     [ObservableProperty] public partial string CustomerAddress { get; set; } = string.Empty;
+
+    /// <summary>Uses the compact invoice designed for counter / walk-in sales.</summary>
+    [ObservableProperty]
+    public partial bool IsWalkInInvoice { get; set; } = true;
 
     /// <summary>Free-text note printed on the receipt (e.g. cut-to-size instructions).</summary>
     [ObservableProperty] public partial string OrderNote { get; set; } = string.Empty;
@@ -856,37 +1199,42 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         if (product is null || product.Stock <= 0)
             return;
 
+        var line = EnsureCartLine(product);
+        if (line.Quantity >= line.AvailableStock)
+            return;
+        line.Quantity++;
+        SyncProductCartQuantity(product.Id, line.Quantity);
+        RecalculateCart();
+    }
+
+    /// <summary>
+    /// Finds the cart line for a product, creating (and wiring) a fresh zero-quantity
+    /// line if none exists yet. Callers set the quantity/price after.
+    /// </summary>
+    private CartLine EnsureCartLine(Product product)
+    {
         var existing = Cart.FirstOrDefault(c => c.ProductId == product.Id);
         if (existing is not null)
-        {
-            if (existing.Quantity >= existing.AvailableStock)
-                return;
-            existing.Quantity++;
-            SyncProductCartQuantity(product.Id, existing.Quantity);
-        }
-        else
-        {
-            var line = new CartLine
-            {
-                ProductId = product.Id,
-                Material = string.IsNullOrWhiteSpace(product.Name) ? product.Category : product.Name,
-                Dimension = product.Dimension,
-                Unit = product.Unit,
-                AvailableStock = product.Stock,
-                UnitPrice = product.Price,
-                Quantity = 1,
-            };
-            line.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == nameof(CartLine.Quantity))
-                    SyncProductCartQuantity(line.ProductId, Math.Max(0, line.Quantity));
-                RecalculateCart();
-            };
-            Cart.Add(line);
-            SyncProductCartQuantity(product.Id, 1);
-        }
+            return existing;
 
-        RecalculateCart();
+        var line = new CartLine
+        {
+            ProductId = product.Id,
+            Material = string.IsNullOrWhiteSpace(product.Name) ? product.Category : product.Name,
+            Dimension = product.Dimension,
+            Unit = product.Unit,
+            AvailableStock = product.Stock,
+            UnitPrice = product.Price,
+            Quantity = 0,
+        };
+        line.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(CartLine.Quantity))
+                SyncProductCartQuantity(line.ProductId, Math.Max(0, line.Quantity));
+            RecalculateCart();
+        };
+        Cart.Add(line);
+        return line;
     }
 
     [RelayCommand]
@@ -964,6 +1312,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
         var product = CategoryProducts.FirstOrDefault(p => p.Id == productId);
         if (product is not null)
             product.CartQuantity = Math.Max(0, quantity);
+
+        var catalogProduct = CatalogItems.FirstOrDefault(p => p.Id == productId);
+        if (catalogProduct is not null)
+            catalogProduct.CartQuantity = Math.Max(0, quantity);
     }
 
     private bool HasCartItems() => Cart.Count > 0;
@@ -1007,6 +1359,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
             AmountPaid = paid,
             ChangeDue = Math.Max(0, paid - total),
             PaymentMethod = PaymentMethod,
+            InvoiceFormat = IsWalkInInvoice ? "WalkIn" : "Detailed",
             Items = lines.Select(l => new SaleItem
             {
                 ProductId = l.ProductId,
@@ -1178,7 +1531,7 @@ public partial class MaterialSelectionViewModel : ViewModelBase
 
     public bool IsNewCategoryEntry => SelectedCategoryChoice == CreateCategoryChoice || SelectedCategoryChoice == CreateCategoryChoiceKhmer;
     public bool IsNewMaterialEntry => SelectedMaterialChoice == CreateMaterialChoice || SelectedMaterialChoice == CreateMaterialChoiceKhmer;
-    public bool ShowCategoryTextInput => IsEditing || IsNewCategoryEntry;
+    public bool ShowCategoryTextInput => IsNewCategoryEntry;
     public bool ShowMaterialTextInput => IsEditing || IsNewMaterialEntry;
 
     [ObservableProperty] public partial string FormCategory { get; set; } = string.Empty;
@@ -1189,12 +1542,57 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     [ObservableProperty] public partial string FormPriceText { get; set; } = string.Empty;
     [ObservableProperty] public partial string FormStockText { get; set; } = string.Empty;
 
+    /// <summary>Last real category chosen, so cancelling the "new category" modal can revert.</summary>
+    private string? _lastRealCategoryChoice;
+
+    [ObservableProperty]
+    public partial bool IsNewCategoryModalOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string NewCategoryName { get; set; } = string.Empty;
+
     partial void OnSelectedCategoryChoiceChanged(string? value)
     {
-        if (!IsEditing && !string.IsNullOrWhiteSpace(value) && !IsNewCategoryChoice(value))
+        if (IsNewCategoryChoice(value))
+        {
+            // Picking the "＋ Create new group" row opens a modal instead of selecting a category.
+            NewCategoryName = string.Empty;
+            IsNewCategoryModalOpen = true;
+        }
+        else if (!string.IsNullOrWhiteSpace(value))
+        {
             FormCategory = value;
-        else if (!IsEditing && IsNewCategoryChoice(value))
-            FormCategory = string.Empty;
+            _lastRealCategoryChoice = value;
+        }
+    }
+
+    /// <summary>Adds the typed category to the dropdown and auto-selects it.</summary>
+    [RelayCommand]
+    private void SaveNewCategory()
+    {
+        var name = NewCategoryName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+
+        var existing = CategoryChoices.FirstOrDefault(
+            c => !IsNewCategoryChoice(c) && string.Equals(c, name, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            var insertAt = CategoryChoices.Count > 0 ? CategoryChoices.Count - 1 : 0;
+            CategoryChoices.Insert(insertAt, name);
+            existing = name;
+        }
+
+        IsNewCategoryModalOpen = false;
+        SelectedCategoryChoice = existing;
+    }
+
+    /// <summary>Closes the modal without adding, reverting the dropdown to its previous choice.</summary>
+    [RelayCommand]
+    private void CancelNewCategory()
+    {
+        IsNewCategoryModalOpen = false;
+        SelectedCategoryChoice = _lastRealCategoryChoice;
     }
 
     partial void OnSelectedMaterialChoiceChanged(string? value)
@@ -1224,14 +1622,6 @@ public partial class MaterialSelectionViewModel : ViewModelBase
                      .OrderBy(name => name))
             CategoryChoices.Add(category);
         CategoryChoices.Add(IsKhmer ? CreateCategoryChoiceKhmer : CreateCategoryChoice);
-
-        MaterialChoices.Clear();
-        foreach (var material in _db.SearchProducts(null).Select(p => p.Name)
-                     .Where(name => !string.IsNullOrWhiteSpace(name))
-                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                     .OrderBy(name => name))
-            MaterialChoices.Add(material);
-        MaterialChoices.Add(IsKhmer ? CreateMaterialChoiceKhmer : CreateMaterialChoice);
     }
 
     /// <summary>Resets the form fields (used by the drawer's "Clear" button).</summary>
@@ -1240,8 +1630,10 @@ public partial class MaterialSelectionViewModel : ViewModelBase
     {
         EditingProductId = 0;
         LoadProductChoices();
-        SelectedCategoryChoice = IsKhmer ? CreateCategoryChoiceKhmer : CreateCategoryChoice;
-        SelectedMaterialChoice = IsKhmer ? CreateMaterialChoiceKhmer : CreateMaterialChoice;
+        SelectedCategoryChoice = null;
+        _lastRealCategoryChoice = null;
+        IsNewCategoryModalOpen = false;
+        NewCategoryName = string.Empty;
         FormCategory = string.Empty;
         FormName = string.Empty;
         FormDimension = string.Empty;

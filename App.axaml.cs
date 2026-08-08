@@ -38,7 +38,10 @@ public partial class App : Application
                     hasAuthenticated = true;
 
                     var sync = new TursoSyncService(database);
-                    sync.StartBackgroundSync(System.TimeSpan.FromHours(1));
+                    // Honour the interval the user last chose in Settings → Backup
+                    // (stored in AppState), defaulting to hourly.
+                    var savedMinutes = int.TryParse(database.GetAppState("BackupIntervalMinutes"), out var m) && m > 0 ? m : 60;
+                    sync.StartBackgroundSync(System.TimeSpan.FromMinutes(savedMinutes));
                     desktop.ShutdownRequested += (_, _) => sync.Stop();
 
                     var signedInPhone = (loginWindow.DataContext as LoginViewModel)?.AuthenticatedPhone;
